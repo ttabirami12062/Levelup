@@ -1,26 +1,391 @@
 @import "tailwindcss";
 
+/* ============================================
+   LEVELUP — GLOBAL STYLES
+   A math runner game for kids aged 8-10
+   2.5D world with warm, bright, game-feel colors
+   ============================================ */
+
+/* ── GOOGLE FONTS ── */
+@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Fredoka+One&display=swap');
+
+/* ============================================
+   CSS VARIABLES — THE DESIGN SYSTEM
+   Every color, shadow and value in one place.
+   Change here = changes everywhere in the app.
+   ============================================ */
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+
+  /* ── WORLD COLORS — the running game world ── */
+
+  /* Sky */
+  --sky-top:          #5BB8F5;   /* deep sky blue at top */
+  --sky-bottom:       #C9EEFF;   /* lighter blue near horizon */
+
+  /* Ground */
+  --grass-top:        #6AC94F;   /* bright fresh green */
+  --grass-edge:       #4DAF35;   /* darker green edge line */
+  --dirt:             #C8874A;   /* warm brown earth */
+  --dirt-shadow:      #A0612A;   /* deeper brown shadow */
+
+  /* Far background hills */
+  --hill-far:         #A8D8A8;   /* muted soft green — distant */
+  --hill-mid:         #7EC87E;   /* medium green — closer */
+
+  /* ── GAME OBJECTS ── */
+
+  /* Answer stones */
+  --stone-bg:         #FFFFFF;   /* clean white stone */
+  --stone-border:     #E0E0E0;   /* very light grey edge */
+  --stone-shadow:     rgba(0, 0, 0, 0.18); /* soft drop shadow */
+  --stone-correct:    #5DBE4A;   /* green flash on correct */
+  --stone-wrong:      #E85454;   /* red flash on wrong */
+
+  /* Numbers on stones */
+  --number-color:     #F5A623;   /* warm orange — like reference */
+  --number-shadow:    #C47A10;   /* deeper orange shadow */
+
+  /* Equation bar */
+  --equation-color:   #F5A623;   /* same warm orange */
+  --equation-bg:      rgba(255,255,255,0.95); /* near white bg */
+
+  /* ── CURRENCY ── */
+
+  /* Coins */
+  --coin-base:        #F5C842;   /* warm gold */
+  --coin-shine:       #FFE066;   /* bright highlight */
+  --coin-shadow:      #C49A1A;   /* deep gold edge */
+  --coin-glow:        rgba(245, 200, 66, 0.5); /* gold glow */
+
+  /* Gems */
+  --gem-base:         #9B7FE8;   /* soft purple */
+  --gem-shine:        #C4AEFF;   /* light purple highlight */
+  --gem-shadow:       #6A4FC4;   /* deep purple edge */
+  --gem-glow:         rgba(155, 127, 232, 0.5); /* purple glow */
+
+  /* ── UI COLORS — top bar, menus, overlays ── */
+
+  --ui-dark:          #1A1A2E;   /* deep dark navy for top bar */
+  --ui-card:          #FFFFFF;   /* card backgrounds */
+  --ui-card-hover:    #F8FBFF;   /* card hover state */
+  --ui-overlay:       rgba(26, 26, 46, 0.85); /* dark overlay */
+
+  /* ── AVATAR EFFECTS ── */
+
+  --avatar-glow-correct: #FFD700;  /* gold glow on correct collect */
+  --avatar-glow-wrong:   #FF4444;  /* red glow on wrong collect */
+  --avatar-glow-ai:      #FF6B35;  /* orange glow for AI opponent */
+
+  /* ── STREAK COLORS ── */
+
+  --streak-fire:      #FF6B35;   /* fire orange */
+  --streak-fire-glow: rgba(255, 107, 53, 0.4);
+
+  /* ── GENERAL UI PALETTE ── */
+
+  --primary:          #7B6FE8;   /* purple — main brand color */
+  --primary-light:    #A89FF5;   /* lighter purple */
+  --primary-dark:     #5A50C8;   /* darker purple */
+
+  --success:          #5DBE4A;   /* green */
+  --success-light:    #8DD67E;
+  --success-dark:     #3D9E2A;
+
+  --danger:           #E85454;   /* red */
+  --danger-light:     #F08080;
+  --danger-dark:      #C03030;
+
+  --warning:          #F5A623;   /* orange */
+  --warning-light:    #FFD080;
+  --warning-dark:     #C47A10;
+
+  /* ── TEXT ── */
+
+  --text-primary:     #1A1A2E;   /* near black — main text */
+  --text-secondary:   #5A5A7A;   /* muted — secondary text */
+  --text-light:       #FFFFFF;   /* white — on dark backgrounds */
+  --text-muted:       #9898B8;   /* very muted hints */
+
+  /* ── BACKGROUNDS ── */
+
+  --bg-app:           #EBF5FF;   /* very light blue — app background */
+  --bg-card:          #FFFFFF;
+  --bg-overlay:       rgba(26, 26, 46, 0.7);
+
+  /* ── PARALLAX LAYER SPEEDS ──
+     Used in JS to set scroll speeds.
+     Keeping them here so they are easy to tune. */
+
+  --parallax-far:     0.2;       /* far hills move at 20% speed */
+  --parallax-mid:     0.5;       /* mid trees move at 50% speed */
+  --parallax-near:    1.0;       /* foreground moves at 100% */
+
+  /* ── SHADOWS ── */
+
+  --shadow-sm:        0 2px 8px rgba(0,0,0,0.10);
+  --shadow-md:        0 4px 16px rgba(0,0,0,0.14);
+  --shadow-lg:        0 8px 32px rgba(0,0,0,0.18);
+  --shadow-xl:        0 16px 48px rgba(0,0,0,0.22);
+
+  /* 3D style shadow for game objects */
+  --shadow-stone:     0 6px 0 var(--stone-border),
+                      0 8px 16px var(--stone-shadow);
+  --shadow-coin:      0 4px 0 var(--coin-shadow),
+                      0 6px 12px var(--coin-glow);
+  --shadow-gem:       0 4px 0 var(--gem-shadow),
+                      0 6px 12px var(--gem-glow);
+
+  /* ── BORDER RADIUS ── */
+
+  --radius-sm:        8px;
+  --radius-md:        12px;
+  --radius-lg:        20px;
+  --radius-xl:        28px;
+  --radius-full:      9999px;
+
+  /* ── TYPOGRAPHY ── */
+
+  --font-game:        'Fredoka One', cursive;    /* headings, numbers, game text */
+  --font-ui:          'Nunito', sans-serif;      /* UI text, labels, descriptions */
+
+  /* ── TRANSITIONS ── */
+
+  --transition-fast:  150ms ease;
+  --transition-mid:   300ms ease;
+  --transition-slow:  500ms ease;
+
+  /* ── GAME TIMING ── */
+
+  --timer-default:    15s;       /* default problem time */
+  --runner-speed:     3s;        /* base world scroll speed */
+
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+/* ============================================
+   BASE RESET AND GLOBAL STYLES
+   ============================================ */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html {
+  font-size: 16px;
+  -webkit-text-size-adjust: 100%;
+  scroll-behavior: smooth;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-ui);
+  background-color: var(--bg-app);
+  color: var(--text-primary);
+  line-height: 1.6;
+  min-height: 100vh;
+  overflow-x: hidden;
+
+  /* Makes fonts render crisply — important for game text */
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ── GAME FONT CLASS ── */
+/* Use this class on any element that needs the big game-style font */
+.font-game {
+  font-family: var(--font-game);
+}
+
+/* ── SCROLLBAR ── */
+/* Custom scrollbar so it matches the game style */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: var(--bg-app);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--primary-light);
+  border-radius: var(--radius-full);
+}
+
+/* ============================================
+   UTILITY CLASSES
+   Small reusable classes used across the app
+   ============================================ */
+
+/* ── GLOW EFFECTS — used on coins, gems, correct answers ── */
+
+.glow-gold {
+  box-shadow: 0 0 12px 4px var(--coin-glow);
+}
+
+.glow-purple {
+  box-shadow: 0 0 12px 4px var(--gem-glow);
+}
+
+.glow-green {
+  box-shadow: 0 0 12px 4px rgba(93, 190, 74, 0.5);
+}
+
+.glow-red {
+  box-shadow: 0 0 12px 4px rgba(232, 84, 84, 0.5);
+}
+
+/* ── 3D OBJECT EFFECT ── */
+/* Gives any element a raised, 3D game-object feel */
+
+.object-3d {
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-stone);
+  transform: translateY(0);
+  transition: transform var(--transition-fast),
+              box-shadow var(--transition-fast);
+}
+
+.object-3d:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--shadow-lg);
+}
+
+.object-3d:active {
+  transform: translateY(2px);
+  box-shadow: var(--shadow-sm);
+}
+
+/* ── CORRECT ANSWER FLASH ── */
+
+@keyframes correctFlash {
+  0%   { background: var(--stone-bg); }
+  30%  { background: var(--stone-correct); transform: scale(1.08); }
+  100% { background: var(--stone-bg); transform: scale(1); }
+}
+
+.flash-correct {
+  animation: correctFlash 400ms ease forwards;
+}
+
+/* ── WRONG ANSWER SHAKE ── */
+
+@keyframes wrongShake {
+  0%, 100% { transform: translateX(0); }
+  20%       { transform: translateX(-6px); }
+  40%       { transform: translateX(6px); }
+  60%       { transform: translateX(-4px); }
+  80%       { transform: translateX(4px); }
+}
+
+.shake-wrong {
+  animation: wrongShake 400ms ease forwards;
+  background: var(--stone-wrong) !important;
+}
+
+/* ── COIN POP ANIMATION ── */
+
+@keyframes coinPop {
+  0%   { transform: scale(0) rotate(0deg); opacity: 0; }
+  50%  { transform: scale(1.3) rotate(180deg); opacity: 1; }
+  100% { transform: scale(1) rotate(360deg) translateY(-20px); opacity: 0; }
+}
+
+.coin-pop {
+  animation: coinPop 600ms ease forwards;
+}
+
+/* ── GEM SPARKLE ── */
+
+@keyframes gemSparkle {
+  0%   { transform: scale(0); opacity: 0; }
+  40%  { transform: scale(1.4); opacity: 1; }
+  70%  { transform: scale(0.9); }
+  100% { transform: scale(1) translateY(-24px); opacity: 0; }
+}
+
+.gem-sparkle {
+  animation: gemSparkle 700ms ease forwards;
+}
+
+/* ── AVATAR GLOW ON COLLECT ── */
+
+@keyframes avatarGlow {
+  0%   { filter: drop-shadow(0 0 0px transparent); }
+  50%  { filter: drop-shadow(0 0 16px var(--avatar-glow-correct)); }
+  100% { filter: drop-shadow(0 0 0px transparent); }
+}
+
+.avatar-collect {
+  animation: avatarGlow 500ms ease forwards;
+}
+
+/* ── STREAK FIRE PULSE ── */
+
+@keyframes firePulse {
+  0%, 100% { transform: scale(1); }
+  50%       { transform: scale(1.15); }
+}
+
+.streak-fire {
+  animation: firePulse 800ms ease infinite;
+  color: var(--streak-fire);
+  filter: drop-shadow(0 0 6px var(--streak-fire-glow));
+}
+
+/* ── FLOATING ANIMATION ── */
+/* Used on coins and gems floating in the world */
+
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50%       { transform: translateY(-8px); }
+}
+
+.float {
+  animation: float 2s ease-in-out infinite;
+}
+
+/* ── PARALLAX WORLD LAYERS ── */
+
+.world-layer {
+  position: absolute;
+  width: 100%;
+  will-change: transform;   /* tells browser to optimise this for animation */
+}
+
+.layer-far  { z-index: 1; }
+.layer-mid  { z-index: 2; }
+.layer-near { z-index: 3; }
+.layer-ui   { z-index: 10; }
+
+/* ── GAME SCREEN CONTAINER ── */
+
+.game-screen {
+  position: relative;
+  width: 100%;
+  height: 100vh;
+  overflow: hidden;
+  background: linear-gradient(
+    to bottom,
+    var(--sky-top) 0%,
+    var(--sky-bottom) 60%,
+    var(--grass-top) 60%,
+    var(--grass-edge) 65%,
+    var(--dirt) 65%,
+    var(--dirt-shadow) 100%
+  );
+}
+
+/* ── RESPONSIVE ── */
+
+@media (max-width: 768px) {
+  :root {
+    font-size: 14px;
+  }
+}
+
+@media (max-width: 480px) {
+  :root {
+    font-size: 13px;
+  }
 }
