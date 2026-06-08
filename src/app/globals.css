@@ -1,3 +1,4 @@
+@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Fredoka+One&display=swap');
 @import "tailwindcss";
 
 /* ============================================
@@ -5,9 +6,6 @@
    A math runner game for kids aged 8-10
    2.5D world with warm, bright, game-feel colors
    ============================================ */
-
-/* ── GOOGLE FONTS ── */
-@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Fredoka+One&display=swap');
 
 /* ============================================
    CSS VARIABLES — THE DESIGN SYSTEM
@@ -20,106 +18,104 @@
   /* ── WORLD COLORS — the running game world ── */
 
   /* Sky */
-  --sky-top:          #5BB8F5;   /* deep sky blue at top */
-  --sky-bottom:       #C9EEFF;   /* lighter blue near horizon */
+  --sky-top:          #5BB8F5;
+  --sky-bottom:       #C9EEFF;
 
   /* Ground */
-  --grass-top:        #6AC94F;   /* bright fresh green */
-  --grass-edge:       #4DAF35;   /* darker green edge line */
-  --dirt:             #C8874A;   /* warm brown earth */
-  --dirt-shadow:      #A0612A;   /* deeper brown shadow */
+  --grass-top:        #6AC94F;
+  --grass-edge:       #4DAF35;
+  --dirt:             #C8874A;
+  --dirt-shadow:      #A0612A;
 
   /* Far background hills */
-  --hill-far:         #A8D8A8;   /* muted soft green — distant */
-  --hill-mid:         #7EC87E;   /* medium green — closer */
+  --hill-far:         #A8D8A8;
+  --hill-mid:         #7EC87E;
 
   /* ── GAME OBJECTS ── */
 
   /* Answer stones */
-  --stone-bg:         #FFFFFF;   /* clean white stone */
-  --stone-border:     #E0E0E0;   /* very light grey edge */
-  --stone-shadow:     rgba(0, 0, 0, 0.18); /* soft drop shadow */
-  --stone-correct:    #5DBE4A;   /* green flash on correct */
-  --stone-wrong:      #E85454;   /* red flash on wrong */
+  --stone-bg:         #FFFFFF;
+  --stone-border:     #E0E0E0;
+  --stone-shadow:     rgba(0, 0, 0, 0.18);
+  --stone-correct:    #5DBE4A;
+  --stone-wrong:      #E85454;
 
   /* Numbers on stones */
-  --number-color:     #F5A623;   /* warm orange — like reference */
-  --number-shadow:    #C47A10;   /* deeper orange shadow */
+  --number-color:     #F5A623;
+  --number-shadow:    #C47A10;
 
   /* Equation bar */
-  --equation-color:   #F5A623;   /* same warm orange */
-  --equation-bg:      rgba(255,255,255,0.95); /* near white bg */
+  --equation-color:   #F5A623;
+  --equation-bg:      rgba(255,255,255,0.95);
 
   /* ── CURRENCY ── */
 
   /* Coins */
-  --coin-base:        #F5C842;   /* warm gold */
-  --coin-shine:       #FFE066;   /* bright highlight */
-  --coin-shadow:      #C49A1A;   /* deep gold edge */
-  --coin-glow:        rgba(245, 200, 66, 0.5); /* gold glow */
+  --coin-base:        #F5C842;
+  --coin-shine:       #FFE066;
+  --coin-shadow:      #C49A1A;
+  --coin-glow:        rgba(245, 200, 66, 0.5);
 
   /* Gems */
-  --gem-base:         #9B7FE8;   /* soft purple */
-  --gem-shine:        #C4AEFF;   /* light purple highlight */
-  --gem-shadow:       #6A4FC4;   /* deep purple edge */
-  --gem-glow:         rgba(155, 127, 232, 0.5); /* purple glow */
+  --gem-base:         #9B7FE8;
+  --gem-shine:        #C4AEFF;
+  --gem-shadow:       #6A4FC4;
+  --gem-glow:         rgba(155, 127, 232, 0.5);
 
-  /* ── UI COLORS — top bar, menus, overlays ── */
+  /* ── UI COLORS ── */
 
-  --ui-dark:          #1A1A2E;   /* deep dark navy for top bar */
-  --ui-card:          #FFFFFF;   /* card backgrounds */
-  --ui-card-hover:    #F8FBFF;   /* card hover state */
-  --ui-overlay:       rgba(26, 26, 46, 0.85); /* dark overlay */
+  --ui-dark:          #1A1A2E;
+  --ui-card:          #FFFFFF;
+  --ui-card-hover:    #F8FBFF;
+  --ui-overlay:       rgba(26, 26, 46, 0.85);
 
   /* ── AVATAR EFFECTS ── */
 
-  --avatar-glow-correct: #FFD700;  /* gold glow on correct collect */
-  --avatar-glow-wrong:   #FF4444;  /* red glow on wrong collect */
-  --avatar-glow-ai:      #FF6B35;  /* orange glow for AI opponent */
+  --avatar-glow-correct: #FFD700;
+  --avatar-glow-wrong:   #FF4444;
+  --avatar-glow-ai:      #FF6B35;
 
   /* ── STREAK COLORS ── */
 
-  --streak-fire:      #FF6B35;   /* fire orange */
+  --streak-fire:      #FF6B35;
   --streak-fire-glow: rgba(255, 107, 53, 0.4);
 
   /* ── GENERAL UI PALETTE ── */
 
-  --primary:          #7B6FE8;   /* purple — main brand color */
-  --primary-light:    #A89FF5;   /* lighter purple */
-  --primary-dark:     #5A50C8;   /* darker purple */
+  --primary:          #7B6FE8;
+  --primary-light:    #A89FF5;
+  --primary-dark:     #5A50C8;
 
-  --success:          #5DBE4A;   /* green */
+  --success:          #5DBE4A;
   --success-light:    #8DD67E;
   --success-dark:     #3D9E2A;
 
-  --danger:           #E85454;   /* red */
+  --danger:           #E85454;
   --danger-light:     #F08080;
   --danger-dark:      #C03030;
 
-  --warning:          #F5A623;   /* orange */
+  --warning:          #F5A623;
   --warning-light:    #FFD080;
   --warning-dark:     #C47A10;
 
   /* ── TEXT ── */
 
-  --text-primary:     #1A1A2E;   /* near black — main text */
-  --text-secondary:   #5A5A7A;   /* muted — secondary text */
-  --text-light:       #FFFFFF;   /* white — on dark backgrounds */
-  --text-muted:       #9898B8;   /* very muted hints */
+  --text-primary:     #1A1A2E;
+  --text-secondary:   #5A5A7A;
+  --text-light:       #FFFFFF;
+  --text-muted:       #9898B8;
 
   /* ── BACKGROUNDS ── */
 
-  --bg-app:           #EBF5FF;   /* very light blue — app background */
+  --bg-app:           #EBF5FF;
   --bg-card:          #FFFFFF;
   --bg-overlay:       rgba(26, 26, 46, 0.7);
 
-  /* ── PARALLAX LAYER SPEEDS ──
-     Used in JS to set scroll speeds.
-     Keeping them here so they are easy to tune. */
+  /* ── PARALLAX LAYER SPEEDS ── */
 
-  --parallax-far:     0.2;       /* far hills move at 20% speed */
-  --parallax-mid:     0.5;       /* mid trees move at 50% speed */
-  --parallax-near:    1.0;       /* foreground moves at 100% */
+  --parallax-far:     0.2;
+  --parallax-mid:     0.5;
+  --parallax-near:    1.0;
 
   /* ── SHADOWS ── */
 
@@ -128,7 +124,6 @@
   --shadow-lg:        0 8px 32px rgba(0,0,0,0.18);
   --shadow-xl:        0 16px 48px rgba(0,0,0,0.22);
 
-  /* 3D style shadow for game objects */
   --shadow-stone:     0 6px 0 var(--stone-border),
                       0 8px 16px var(--stone-shadow);
   --shadow-coin:      0 4px 0 var(--coin-shadow),
@@ -146,8 +141,8 @@
 
   /* ── TYPOGRAPHY ── */
 
-  --font-game:        'Fredoka One', cursive;    /* headings, numbers, game text */
-  --font-ui:          'Nunito', sans-serif;      /* UI text, labels, descriptions */
+  --font-game:        'Fredoka One', cursive;
+  --font-ui:          'Nunito', sans-serif;
 
   /* ── TRANSITIONS ── */
 
@@ -157,8 +152,8 @@
 
   /* ── GAME TIMING ── */
 
-  --timer-default:    15s;       /* default problem time */
-  --runner-speed:     3s;        /* base world scroll speed */
+  --timer-default:    15s;
+  --runner-speed:     3s;
 
 }
 
@@ -187,20 +182,16 @@ body {
   line-height: 1.6;
   min-height: 100vh;
   overflow-x: hidden;
-
-  /* Makes fonts render crisply — important for game text */
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
 /* ── GAME FONT CLASS ── */
-/* Use this class on any element that needs the big game-style font */
 .font-game {
   font-family: var(--font-game);
 }
 
 /* ── SCROLLBAR ── */
-/* Custom scrollbar so it matches the game style */
 ::-webkit-scrollbar {
   width: 6px;
 }
@@ -214,10 +205,9 @@ body {
 
 /* ============================================
    UTILITY CLASSES
-   Small reusable classes used across the app
    ============================================ */
 
-/* ── GLOW EFFECTS — used on coins, gems, correct answers ── */
+/* ── GLOW EFFECTS ── */
 
 .glow-gold {
   box-shadow: 0 0 12px 4px var(--coin-glow);
@@ -236,7 +226,6 @@ body {
 }
 
 /* ── 3D OBJECT EFFECT ── */
-/* Gives any element a raised, 3D game-object feel */
 
 .object-3d {
   border-radius: var(--radius-lg);
@@ -334,7 +323,6 @@ body {
 }
 
 /* ── FLOATING ANIMATION ── */
-/* Used on coins and gems floating in the world */
 
 @keyframes float {
   0%, 100% { transform: translateY(0px); }
@@ -350,7 +338,7 @@ body {
 .world-layer {
   position: absolute;
   width: 100%;
-  will-change: transform;   /* tells browser to optimise this for animation */
+  will-change: transform;
 }
 
 .layer-far  { z-index: 1; }
