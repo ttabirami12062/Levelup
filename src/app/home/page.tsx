@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { useGame } from "@/lib/gameContext";
 
 const ROOMS = [
   { id: 1, name: "Bedroom",     unlocked: true  },
@@ -14,9 +15,7 @@ export default function Home() {
   const router = useRouter();
   const [name, setName]         = useState("Player");
   const [avatarId, setAvatarId] = useState(1);
-  const [coins, setCoins]       = useState(124);
-  const [gems, setGems]         = useState(8);
-  const [streak, setStreak]     = useState(14);
+  const { coins, gems, streak } = useGame();
 
   const avatarColors: Record<number, { bg: string; border: string }> = {
     1: { bg: "#FF6B9D", border: "#CC4477" },
