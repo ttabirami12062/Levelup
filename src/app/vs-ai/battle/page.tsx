@@ -67,7 +67,7 @@ const HINT_FACTS = [
 function BattleScreen() {
   const router       = useRouter();
   const searchParams = useSearchParams();
-  const { addCoins, addGems } = useGame();
+  const { addCoins, addGems, updateStreak } = useGame();
 
   const difficulty = searchParams.get("difficulty") || "medium";
   const zetaSpeed  = Number(searchParams.get("zetaSpeed")) || 5000;
@@ -343,6 +343,8 @@ function BattleScreen() {
       lastTimeRef.current = performance.now();
       animFrameRef.current = requestAnimationFrame(gameLoop);
       scheduleZeta();
+      // Update streak when kid starts playing
+      updateStreak();
       return;
     }
     const t = setTimeout(() => setCountdown(c => c - 1), 1000);

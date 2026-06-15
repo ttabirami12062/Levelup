@@ -99,7 +99,7 @@ const HINT_FACTS = [
 
 export default function SoloGame() {
   const router = useRouter();
-  const { addCoins, addGems } = useGame();
+  const { addCoins, addGems, updateStreak } = useGame();
 
   const [equation, setEquation]         = useState<Equation>({ question: "Get ready!", answer: 0, type: "add" });
   const [stones, setStones]             = useState<Stone[]>([]);
@@ -373,6 +373,8 @@ export default function SoloGame() {
       gamePhaseRef.current = "playing";
       lastTimeRef.current = performance.now();
       animFrameRef.current = requestAnimationFrame(gameLoop);
+      // Update streak when kid starts playing
+      updateStreak();
       return;
     }
     const timer = setTimeout(() => setCountdown(c => c - 1), 1000);

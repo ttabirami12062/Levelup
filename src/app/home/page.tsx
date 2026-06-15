@@ -13,8 +13,10 @@ const ROOMS = [
 
 export default function Home() {
   const router = useRouter();
-  const [name, setName]         = useState("Player");
-  const [avatarId, setAvatarId] = useState(1);
+  const [name, setName]                       = useState("Player");
+  const [avatarId, setAvatarId]               = useState(1);
+  const [showMilestone, setShowMilestone]     = useState(false);
+  const [playedToday, setPlayedToday]         = useState(false);
   const { coins, gems, streak } = useGame();
 
   const avatarColors: Record<number, { bg: string; border: string }> = {
@@ -25,12 +27,39 @@ export default function Home() {
   };
   const avatar = avatarColors[avatarId] || avatarColors[1];
 
+  // Load name and avatar from localStorage
   useEffect(() => {
     const savedName   = localStorage.getItem("levelup_name");
     const savedAvatar = localStorage.getItem("levelup_avatar");
     if (savedName)   setName(savedName);
     if (savedAvatar) setAvatarId(Number(savedAvatar));
   }, []);
+
+  // Check if kid played today for streak warning
+  useEffect(() => {
+    const saved = localStorage.getItem("levelup_gamestate");
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        const today  = new Date().toDateString();
+        setPlayedToday(parsed.lastPlayed === today);
+      } catch {
+        setPlayedToday(false);
+      }
+    }
+  }, []);
+
+  // Check for milestone celebration
+  useEffect(() => {
+    const milestones = [7, 30, 100];
+    if (milestones.includes(streak) && streak > 0) {
+      setShowMilestone(true);
+    }
+  }, [streak]);
+
+  // Next milestone reward text
+  const nextMilestone = streak < 7 ? 7 : streak < 30 ? 30 : streak < 100 ? 100 : null;
+  const nextMilestoneText = nextMilestone ? `at ${nextMilestone} days` : "legend status!";
 
   return (
     <main
@@ -50,8 +79,6 @@ export default function Home() {
 
         {/* ── TOP BAR ── */}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-
-          {/* Avatar and name */}
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <div
               style={{
@@ -73,7 +100,6 @@ export default function Home() {
             </div>
           </div>
 
-          {/* Coins and gems */}
           <div style={{ display: "flex", gap: 8 }}>
             <div style={{ background: "rgba(255,255,255,0.92)", borderRadius: 999, padding: "6px 12px", display: "flex", alignItems: "center", gap: 6, boxShadow: "0 2px 8px rgba(0,0,0,0.1)" }}>
               <CoinIcon size={18} />
@@ -85,6 +111,33 @@ export default function Home() {
             </div>
           </div>
         </div>
+
+        {/* ── STREAK WARNING ── */}
+        {/* Shows only if kid has a streak but has not played today */}
+        {streak > 0 && !playedToday && (
+          <div
+            style={{
+              background: "linear-gradient(135deg, #FF6B35, #E85454)",
+              borderRadius: 16,
+              padding: "10px 16px",
+              marginBottom: 10,
+              display: "flex",
+              alignItems: "center",
+              gap: 10,
+              boxShadow: "0 4px 12px rgba(232,84,84,0.3)",
+            }}
+          >
+            <FlameIcon />
+            <div style={{ flex: 1 }}>
+              <div style={{ fontFamily: "var(--font-game)", fontSize: 13, color: "white" }}>
+                play today to keep your streak!
+              </div>
+              <div style={{ fontFamily: "var(--font-ui)", fontSize: 11, color: "rgba(255,255,255,0.85)", marginTop: 2 }}>
+                your {streak} day streak is at risk
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* ── STREAK CARD ── */}
         <div
@@ -104,7 +157,7 @@ export default function Home() {
           </div>
           <div style={{ textAlign: "right" }}>
             <div style={{ fontSize: 10, color: "#9898B8", fontFamily: "var(--font-ui)" }}>next reward</div>
-            <div style={{ fontSize: 13, color: "#F5A623", fontFamily: "var(--font-game)" }}>at 20 days</div>
+            <div style={{ fontSize: 13, color: "#F5A623", fontFamily: "var(--font-game)" }}>{nextMilestoneText}</div>
           </div>
         </div>
 
@@ -126,7 +179,6 @@ export default function Home() {
           onMouseDown={(e) => { e.currentTarget.style.transform = "translateY(3px)"; e.currentTarget.style.boxShadow = "0 3px 0 #3A30A8"; }}
           onMouseUp={(e) => { e.currentTarget.style.transform = "translateY(0)"; e.currentTarget.style.boxShadow = "0 6px 0 #3A30A8, 0 10px 24px rgba(90,80,200,0.4)"; }}
         >
-          {/* Background lightning bolt */}
           <div style={{ position: "absolute", right: 20, top: "50%", transform: "translateY(-50%)", opacity: 0.15 }}>
             <LightningIcon size={64} color="white" />
           </div>
@@ -155,7 +207,6 @@ export default function Home() {
           onMouseDown={(e) => { e.currentTarget.style.transform = "translateY(3px)"; e.currentTarget.style.boxShadow = "0 3px 0 #A02020"; }}
           onMouseUp={(e) => { e.currentTarget.style.transform = "translateY(0)"; e.currentTarget.style.boxShadow = "0 6px 0 #A02020, 0 10px 24px rgba(200,48,48,0.4)"; }}
         >
-          {/* Background Zeta star character */}
           <div style={{ position: "absolute", right: 16, top: "50%", transform: "translateY(-50%)", opacity: 0.2 }}>
             <ZetaIcon size={72} />
           </div>
@@ -216,16 +267,107 @@ export default function Home() {
         <Bush /><Bush /><Bush /><Bush /><Bush /><Bush />
       </div>
 
+      {/* ── MILESTONE CELEBRATION OVERLAY ── */}
+      {showMilestone && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(26,26,46,0.88)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 100,
+            padding: 20,
+          }}
+        >
+          <div
+            style={{
+              background: "rgba(255,255,255,0.97)",
+              borderRadius: 28,
+              padding: "28px 24px",
+              width: "100%",
+              maxWidth: 360,
+              textAlign: "center",
+              boxShadow: "0 20px 60px rgba(0,0,0,0.3)",
+            }}
+          >
+            <div style={{ display: "flex", justifyContent: "center", marginBottom: 12 }}>
+              <FlameIcon />
+            </div>
+
+            <div
+              style={{
+                fontFamily: "var(--font-game)",
+                fontSize: "clamp(1.4rem, 4vw, 1.8rem)",
+                color: "#FF6B35",
+                marginBottom: 6,
+              }}
+            >
+              {streak} day streak!
+            </div>
+
+            <div
+              style={{
+                fontFamily: "var(--font-ui)",
+                fontSize: 14,
+                color: "#5A5A7A",
+                lineHeight: 1.6,
+                marginBottom: 16,
+              }}
+            >
+              {streak === 7   && "One whole week of playing! You are on fire!"}
+              {streak === 30  && "30 days! You are a Levelup legend!"}
+              {streak === 100 && "100 DAYS! You are absolutely unstoppable!"}
+            </div>
+
+            <div
+              style={{
+                background: "#FFF8E6",
+                borderRadius: 14,
+                padding: "12px 16px",
+                marginBottom: 20,
+                display: "flex",
+                justifyContent: "center",
+                alignItems: "center",
+                gap: 8,
+              }}
+            >
+              <CoinIcon size={20} />
+              <span style={{ fontFamily: "var(--font-game)", fontSize: 16, color: "#C47A10" }}>
+                +2 bonus coins earned!
+              </span>
+            </div>
+
+            <button
+              onClick={() => setShowMilestone(false)}
+              style={{
+                width: "100%",
+                background: "linear-gradient(to bottom, #FFD700, #F5A623)",
+                border: "none",
+                borderRadius: 99,
+                padding: "14px",
+                fontFamily: "var(--font-game)",
+                fontSize: 16,
+                color: "white",
+                cursor: "pointer",
+                boxShadow: "0 4px 0 #C47A10",
+              }}
+            >
+              keep it up!
+            </button>
+          </div>
+        </div>
+      )}
+
     </main>
   );
 }
 
 // ============================================
 // SVG ICON COMPONENTS
-// All illustrations — no emojis anywhere
 // ============================================
 
-// ── COIN ──
 function CoinIcon({ size = 24 }: { size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
@@ -237,7 +379,6 @@ function CoinIcon({ size = 24 }: { size?: number }) {
   );
 }
 
-// ── GEM ──
 function GemIcon({ size = 24 }: { size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
@@ -250,23 +391,17 @@ function GemIcon({ size = 24 }: { size?: number }) {
   );
 }
 
-// ── FLAME ──
 function FlameIcon() {
   return (
     <svg width="36" height="42" viewBox="0 0 36 42" xmlns="http://www.w3.org/2000/svg">
-      {/* Outer flame */}
       <path d="M18 2 C18 2 28 12 28 22 C28 32 22 38 18 40 C14 38 8 32 8 22 C8 12 18 2 18 2 Z" fill="#FF6B35" stroke="#C03010" strokeWidth="1.5"/>
-      {/* Mid flame */}
       <path d="M18 10 C18 10 25 18 25 25 C25 31 22 36 18 38 C14 36 11 31 11 25 C11 18 18 10 18 10 Z" fill="#FFB347"/>
-      {/* Inner flame */}
       <path d="M18 18 C18 18 22 23 22 27 C22 31 20 34 18 35 C16 34 14 31 14 27 C14 23 18 18 18 18 Z" fill="#FFE066"/>
-      {/* Shine */}
       <ellipse cx="15" cy="22" rx="2" ry="4" fill="white" opacity="0.3" transform="rotate(-15 15 22)"/>
     </svg>
   );
 }
 
-// ── LIGHTNING BOLT ──
 function LightningIcon({ size = 32, color = "#FFD700" }: { size?: number; color?: string }) {
   return (
     <svg width={size} height={size} viewBox="0 0 32 40" xmlns="http://www.w3.org/2000/svg">
@@ -275,52 +410,28 @@ function LightningIcon({ size = 32, color = "#FFD700" }: { size?: number; color?
   );
 }
 
-// ── ZETA STAR CHARACTER ──
 function ZetaIcon({ size = 48 }: { size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg">
-      {/* Star body */}
-      <polygon
-        points="30,4 36,22 55,22 40,34 46,52 30,42 14,52 20,34 5,22 24,22"
-        fill="#FFD700"
-        stroke="#C49A00"
-        strokeWidth="2"
-        strokeLinejoin="round"
-      />
-      {/* Star shine */}
-      <polygon
-        points="30,4 36,22 55,22 40,34 46,52 30,42 14,52 20,34 5,22 24,22"
-        fill="#FFE566"
-        stroke="none"
-        clipPath="url(#topHalf)"
-        opacity="0.5"
-      />
-      {/* Crown */}
+      <polygon points="30,4 36,22 55,22 40,34 46,52 30,42 14,52 20,34 5,22 24,22" fill="#FFD700" stroke="#C49A00" strokeWidth="2" strokeLinejoin="round"/>
       <polygon points="22,16 26,10 30,14 34,10 38,16" fill="#FF6B35" stroke="#C03010" strokeWidth="1.5" strokeLinejoin="round"/>
-      {/* Eyes */}
       <ellipse cx="24" cy="28" rx="4" ry="4.5" fill="white" stroke="#1A0A00" strokeWidth="1.5"/>
       <ellipse cx="36" cy="28" rx="4" ry="4.5" fill="white" stroke="#1A0A00" strokeWidth="1.5"/>
       <ellipse cx="24.5" cy="28.5" rx="2.5" ry="3" fill="#1A0A00"/>
       <ellipse cx="36.5" cy="28.5" rx="2.5" ry="3" fill="#1A0A00"/>
-      {/* Eye shine */}
       <ellipse cx="25.5" cy="27" rx="1" ry="1.2" fill="white"/>
       <ellipse cx="37.5" cy="27" rx="1" ry="1.2" fill="white"/>
-      {/* Confident smile */}
       <path d="M24 34 Q30 40 36 34" stroke="#C49A00" strokeWidth="2" fill="none" strokeLinecap="round"/>
-      {/* Cheeks */}
       <ellipse cx="19" cy="32" rx="4" ry="3" fill="#FF6B35" opacity="0.3"/>
       <ellipse cx="41" cy="32" rx="4" ry="3" fill="#FF6B35" opacity="0.3"/>
     </svg>
   );
 }
 
-// ── ROOM ICONS ──
 function RoomIcon({ id, unlocked }: { id: number; unlocked: boolean }) {
-  const color = unlocked ? "#1A1A2E" : "rgba(255,255,255,0.6)";
   const size = 28;
 
   if (id === 1) return (
-    // Bed icon
     <svg width={size} height={size} viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
       <rect x="4" y="18" width="24" height="10" rx="3" fill={unlocked ? "#5B8CFF" : "#888"} stroke={unlocked ? "#2A5ACC" : "#666"} strokeWidth="1.5"/>
       <rect x="4" y="12" width="24" height="8" rx="2" fill={unlocked ? "#FFFFFF" : "#aaa"} stroke={unlocked ? "#ddd" : "#888"} strokeWidth="1.5"/>
@@ -332,7 +443,6 @@ function RoomIcon({ id, unlocked }: { id: number; unlocked: boolean }) {
   );
 
   if (id === 2) return (
-    // Sofa icon
     <svg width={size} height={size} viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
       <rect x="4" y="16" width="24" height="12" rx="4" fill={unlocked ? "#9B7FE8" : "#888"} stroke={unlocked ? "#6A4FC4" : "#666"} strokeWidth="1.5"/>
       <rect x="6" y="12" width="20" height="8" rx="3" fill={unlocked ? "#B09AFF" : "#aaa"} stroke={unlocked ? "#6A4FC4" : "#888"} strokeWidth="1.5"/>
@@ -344,7 +454,6 @@ function RoomIcon({ id, unlocked }: { id: number; unlocked: boolean }) {
   );
 
   if (id === 3) return (
-    // Flower/garden icon
     <svg width={size} height={size} viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
       <rect x="14" y="16" width="4" height="12" rx="2" fill={unlocked ? "#4DAF35" : "#888"} stroke={unlocked ? "#2E7D32" : "#666"} strokeWidth="1.5"/>
       <ellipse cx="16" cy="14" rx="5" ry="5" fill={unlocked ? "#FF6B9D" : "#aaa"} stroke={unlocked ? "#CC4477" : "#888"} strokeWidth="1.5"/>
@@ -356,7 +465,6 @@ function RoomIcon({ id, unlocked }: { id: number; unlocked: boolean }) {
   );
 
   if (id === 4) return (
-    // Tree/treehouse icon
     <svg width={size} height={size} viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
       <rect x="13" y="22" width="6" height="8" rx="2" fill={unlocked ? "#C8874A" : "#888"} stroke={unlocked ? "#8B5200" : "#666"} strokeWidth="1.5"/>
       <polygon points="16,2 28,18 4,18" fill={unlocked ? "#4DAF35" : "#aaa"} stroke={unlocked ? "#2E7D32" : "#888"} strokeWidth="1.5" strokeLinejoin="round"/>
@@ -366,7 +474,6 @@ function RoomIcon({ id, unlocked }: { id: number; unlocked: boolean }) {
     </svg>
   );
 
-  // Padlock for locked
   return (
     <svg width={size} height={size} viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
       <rect x="8" y="14" width="16" height="14" rx="3" fill="rgba(255,255,255,0.3)" stroke="rgba(255,255,255,0.6)" strokeWidth="1.5"/>
@@ -377,7 +484,6 @@ function RoomIcon({ id, unlocked }: { id: number; unlocked: boolean }) {
   );
 }
 
-// ── AVATAR ICON — mini version for top bar ──
 function AvatarIcon({ id }: { id: number }) {
   const colors: Record<number, { shirt: string; hair: string }> = {
     1: { shirt: "#FF6B9D", hair: "#5C3317" },
@@ -401,7 +507,6 @@ function AvatarIcon({ id }: { id: number }) {
   );
 }
 
-// ── CLOUD ──
 function Cloud({ size }: { size: "sm" | "md" | "lg" }) {
   const d = { sm: { width: 80, height: 40, ballSize: 30 }, md: { width: 120, height: 55, ballSize: 45 }, lg: { width: 160, height: 70, ballSize: 58 } }[size];
   return (
@@ -414,7 +519,6 @@ function Cloud({ size }: { size: "sm" | "md" | "lg" }) {
   );
 }
 
-// ── BUSH ──
 function Bush() {
   return (
     <div style={{ position: "relative", width: 44, height: 30 }}>
