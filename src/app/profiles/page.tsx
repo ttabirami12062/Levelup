@@ -57,10 +57,12 @@ export default function Profiles() {
   return (
     <main
       className="relative w-full min-h-screen flex flex-col items-center justify-center py-12 px-4"
-      style={{ background: "linear-gradient(to bottom, #5BB8F5 0%, #C9EEFF 50%, #6AC94F 50%, #4DAF35 56%, #C8874A 56%, #A0612A 100%)" }}
+      style={{ background: "linear-gradient(180deg, #5BB8F5 0%, #C9EEFF 100%)", overflow: "hidden" }}
     >
       <div className="absolute top-[6%] left-[4%] opacity-90"><Cloud size="lg" /></div>
       <div className="absolute top-[10%] right-[6%] opacity-80"><Cloud size="md" /></div>
+      <div className="absolute bottom-[10%] left-[10%] opacity-80"><Cloud size="md" /></div>
+      <div className="absolute bottom-[16%] right-[8%] opacity-70"><Cloud size="sm" /></div>
 
       <div style={{ background: "rgba(255,255,255,0.97)", borderRadius: 32, padding: "36px 32px", width: "100%", maxWidth: 600, boxShadow: "0 20px 60px rgba(0,0,0,0.15)", zIndex: 10, position: "relative" }}>
         <div className="text-center mb-8">
