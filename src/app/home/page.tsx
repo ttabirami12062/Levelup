@@ -5,10 +5,10 @@ import { useRouter } from "next/navigation";
 import { useGame } from "@/lib/gameContext";
 
 const ROOMS = [
-  { id: 1, name: "Bedroom",     unlocked: true  },
-  { id: 2, name: "Living Room", unlocked: true  },
-  { id: 3, name: "Garden",      unlocked: false },
-  { id: 4, name: "Treehouse",   unlocked: false },
+  { id: 1, name: "Bedroom",     unlockStreak: 0  },
+  { id: 2, name: "Living Room", unlockStreak: 0  },
+  { id: 3, name: "Garden",      unlockStreak: 10 },
+  { id: 4, name: "Treehouse",   unlockStreak: 20 },
 ];
 
 export default function Home() {
@@ -228,29 +228,37 @@ export default function Home() {
         </div>
 
         <div style={{ display: "flex", gap: 10, overflowX: "auto", paddingBottom: 8 }}>
-          {ROOMS.map((room) => (
-            <button
-              key={room.id}
-              onClick={() => room.unlocked && router.push(`/room?id=${room.id}`)}
-              style={{
-                background: room.unlocked ? "rgba(255,255,255,0.92)" : "rgba(0,0,0,0.2)",
-                borderRadius: 16, padding: "10px 14px", textAlign: "center",
-                minWidth: 76, border: room.unlocked ? "2px solid rgba(255,255,255,0.8)" : "2px dashed rgba(255,255,255,0.3)",
-                cursor: room.unlocked ? "pointer" : "not-allowed",
-                opacity: room.unlocked ? 1 : 0.5,
-                transition: "transform 150ms ease", flexShrink: 0,
-              }}
-              onMouseDown={(e) => { if (room.unlocked) e.currentTarget.style.transform = "scale(0.95)"; }}
-              onMouseUp={(e) => { e.currentTarget.style.transform = "scale(1)"; }}
-            >
-              <div style={{ marginBottom: 6, display: "flex", justifyContent: "center" }}>
-                <RoomIcon id={room.id} unlocked={room.unlocked} />
-              </div>
-              <div style={{ fontSize: 9, color: room.unlocked ? "#1A1A2E" : "rgba(255,255,255,0.8)", fontFamily: "var(--font-game)", whiteSpace: "nowrap" }}>
-                {room.name}
-              </div>
-            </button>
-          ))}
+          {ROOMS.map((room) => {
+            const unlocked = streak >= room.unlockStreak;
+            return (
+              <button
+                key={room.id}
+                onClick={() => unlocked && router.push(`/room?id=${room.id}`)}
+                style={{
+                  background: unlocked ? "rgba(255,255,255,0.92)" : "rgba(0,0,0,0.2)",
+                  borderRadius: 16, padding: "10px 14px", textAlign: "center",
+                  minWidth: 76, border: unlocked ? "2px solid rgba(255,255,255,0.8)" : "2px dashed rgba(255,255,255,0.3)",
+                  cursor: unlocked ? "pointer" : "not-allowed",
+                  opacity: unlocked ? 1 : 0.5,
+                  transition: "transform 150ms ease", flexShrink: 0,
+                }}
+                onMouseDown={(e) => { if (unlocked) e.currentTarget.style.transform = "scale(0.95)"; }}
+                onMouseUp={(e) => { e.currentTarget.style.transform = "scale(1)"; }}
+              >
+                <div style={{ marginBottom: 6, display: "flex", justifyContent: "center" }}>
+                  <RoomIcon id={room.id} unlocked={unlocked} />
+                </div>
+                <div style={{ fontSize: 9, color: unlocked ? "#1A1A2E" : "rgba(255,255,255,0.8)", fontFamily: "var(--font-game)", whiteSpace: "nowrap" }}>
+                  {room.name}
+                </div>
+                {!unlocked && (
+                  <div style={{ fontSize: 8, color: "rgba(255,255,255,0.9)", fontFamily: "var(--font-ui)", marginTop: 3, whiteSpace: "nowrap" }}>
+                    🔒 {room.unlockStreak} day streak
+                  </div>
+                )}
+              </button>
+            );
+          })}
         </div>
 
       </div>
