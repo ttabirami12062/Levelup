@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useGame } from "@/lib/gameContext";
+import { getAvatarById } from "@/components/avatar/Avatars";
 
 const ROOMS = [
   { id: 1, name: "Bedroom",     unlockStreak: 0  },
@@ -19,13 +20,8 @@ export default function Home() {
   const [playedToday, setPlayedToday]         = useState(false);
   const { coins, gems, streak } = useGame();
 
-  const avatarColors: Record<number, { bg: string; border: string }> = {
-    1: { bg: "#FF6B9D", border: "#CC4477" },
-    2: { bg: "#9B7FE8", border: "#6A4FC4" },
-    3: { bg: "#FFD700", border: "#C9A800" },
-    4: { bg: "#4CAF50", border: "#2E7D32" },
-  };
-  const avatar = avatarColors[avatarId] || avatarColors[1];
+  const avatarMeta = getAvatarById(avatarId);
+  const AvatarComponent = avatarMeta.component;
 
   // Load name and avatar from localStorage
   useEffect(() => {
@@ -83,12 +79,15 @@ export default function Home() {
             <div
               style={{
                 width: 52, height: 52, borderRadius: "50%",
-                background: avatar.bg, border: `3px solid ${avatar.border}`,
-                display: "flex", alignItems: "center", justifyContent: "center",
+                background: avatarMeta.color, border: `3px solid ${avatarMeta.shadow}`,
+                display: "flex", alignItems: "flex-end", justifyContent: "center",
                 boxShadow: "0 4px 12px rgba(0,0,0,0.15)", overflow: "hidden",
               }}
             >
-              <AvatarIcon id={avatarId} />
+              {/* full character scaled so the head/upper body fills the circle */}
+              <div style={{ width: 46, height: 69, marginBottom: -12 }}>
+                <AvatarComponent />
+              </div>
             </div>
             <div>
               <div style={{ fontSize: 11, color: "rgba(255,255,255,0.85)", fontFamily: "var(--font-ui)" }}>
@@ -488,29 +487,6 @@ function RoomIcon({ id, unlocked }: { id: number; unlocked: boolean }) {
       <path d="M11 14 L11 10 C11 6 21 6 21 10 L21 14" fill="none" stroke="rgba(255,255,255,0.6)" strokeWidth="2.5" strokeLinecap="round"/>
       <ellipse cx="16" cy="21" rx="2.5" ry="2.5" fill="rgba(255,255,255,0.6)"/>
       <rect x="15" y="21" width="2" height="4" rx="1" fill="rgba(255,255,255,0.6)"/>
-    </svg>
-  );
-}
-
-function AvatarIcon({ id }: { id: number }) {
-  const colors: Record<number, { shirt: string; hair: string }> = {
-    1: { shirt: "#FF6B9D", hair: "#5C3317" },
-    2: { shirt: "#FFFFFF", hair: "#5C3317" },
-    3: { shirt: "#FFD700", hair: "#5C3317" },
-    4: { shirt: "#4CAF50", hair: "#5C3317" },
-  };
-  const c = colors[id] || colors[1];
-  return (
-    <svg viewBox="0 0 52 52" xmlns="http://www.w3.org/2000/svg" width="52" height="52">
-      <ellipse cx="26" cy="20" rx="12" ry="13" fill="#C68642" stroke="#9A6020" strokeWidth="1.5"/>
-      <ellipse cx="26" cy="14" rx="12" ry="6" fill={c.hair} stroke="#3B1F0A" strokeWidth="1.5"/>
-      <rect x="14" y="32" width="24" height="18" rx="8" fill={c.shirt} stroke="#00000022" strokeWidth="1"/>
-      <ellipse cx="26" cy="21" rx="8" ry="8" fill="#C68642"/>
-      <ellipse cx="21" cy="19" rx="3" ry="3.5" fill="white" stroke="#2A1A00" strokeWidth="1"/>
-      <ellipse cx="31" cy="19" rx="3" ry="3.5" fill="white" stroke="#2A1A00" strokeWidth="1"/>
-      <ellipse cx="21.5" cy="19.5" rx="1.8" ry="2" fill="#1A0A00"/>
-      <ellipse cx="31.5" cy="19.5" rx="1.8" ry="2" fill="#1A0A00"/>
-      <path d="M21 25 Q26 30 31 25" stroke="#9A6020" strokeWidth="1.5" fill="none" strokeLinecap="round"/>
     </svg>
   );
 }
