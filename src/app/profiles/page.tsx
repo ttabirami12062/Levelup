@@ -46,10 +46,16 @@ export default function Profiles() {
     localStorage.setItem("levelup_active_profile", profile.id);
     localStorage.setItem("levelup_name", profile.name);
     localStorage.setItem("levelup_avatar", String(profile.avatar));
-    router.push("/home");
+    // Full reload so gameContext re-fetches this kid's progress from scratch
+    // (a soft router.push would keep the previous kid's state in memory).
+    window.location.href = "/home";
   };
 
   const signOut = async () => {
+    // Clear the active kid so the next session starts clean.
+    localStorage.removeItem("levelup_active_profile");
+    localStorage.removeItem("levelup_name");
+    localStorage.removeItem("levelup_avatar");
     await supabase.auth.signOut();
     router.replace("/login");
   };
