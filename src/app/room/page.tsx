@@ -345,8 +345,31 @@ function RoomContent() {
                 onClick={(e) => { e.stopPropagation(); setSelected(isSel ? null : p.itemId); }}
               >
                 <FlatSprite id={p.itemId} room={room} />
-                {isSel && (
-                  <button onClick={(e) => { e.stopPropagation(); removeItem(p.itemId); }} style={{ position: "absolute", top: -10, right: -4, width: 22, height: 22, background: "#E85454", border: "2px solid white", borderRadius: "50%", color: "white", fontSize: 13, cursor: "pointer", lineHeight: 1 }}>×</button>
+              {isSel && (
+                  <button
+                    onPointerDown={(e) => { e.stopPropagation(); e.preventDefault(); removeItem(p.itemId); }}
+                    onClick={(e) => { e.stopPropagation(); removeItem(p.itemId); }}
+                    style={{
+                      position: "absolute",
+                      top: -14,
+                      right: -14,
+                      width: 32,
+                      height: 32,
+                      background: "#E85454",
+                      border: "3px solid white",
+                      borderRadius: "50%",
+                      color: "white",
+                      fontSize: 18,
+                      cursor: "pointer",
+                      lineHeight: 1,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      zIndex: 1000,
+                      boxShadow: "0 2px 6px rgba(0,0,0,0.3)",
+                      touchAction: "none",
+                    }}
+                  >×</button>
                 )}
               </div>
             );
