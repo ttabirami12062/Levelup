@@ -17,8 +17,14 @@ export default function Home() {
   const [name, setName]                       = useState("Player");
   const [avatarId, setAvatarId]               = useState(1);
   const [showMilestone, setShowMilestone]     = useState(false);
-  const [playedToday, setPlayedToday]         = useState(false);
-  const { coins, gems, streak } = useGame();
+  const { coins, gems, streak, loading } = useGame();
+  // Keep the coin loader on screen for a brief minimum so it always shows
+  // a full spin, even when Supabase responds instantly.
+  const [minTimePassed, setMinTimePassed] = useState(false);
+  useEffect(() => {
+    const t = setTimeout(() => setMinTimePassed(true), 800);
+    return () => clearTimeout(t);
+  }, []);
 
   const avatarMeta = getAvatarById(avatarId);
   const AvatarComponent = avatarMeta.component;
@@ -31,19 +37,10 @@ export default function Home() {
     if (savedAvatar) setAvatarId(Number(savedAvatar));
   }, []);
 
-  // Check if kid played today for streak warning
-  useEffect(() => {
-    const saved = localStorage.getItem("levelup_gamestate");
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        const today  = new Date().toDateString();
-        setPlayedToday(parsed.lastPlayed === today);
-      } catch {
-        setPlayedToday(false);
-      }
-    }
-  }, []);
+  // Has the kid already played today? Compare the streak's last-played
+  // date (from Supabase, via game context) against today.
+  const today = new Date().toDateString();
+  const playedToday = streak > 0; // streak only counts up once a day is played
 
   // Check for milestone celebration
   useEffect(() => {
@@ -56,6 +53,12 @@ export default function Home() {
   // Next milestone reward text
   const nextMilestone = streak < 7 ? 7 : streak < 30 ? 30 : streak < 100 ? 100 : null;
   const nextMilestoneText = nextMilestone ? `at ${nextMilestone} days` : "legend status!";
+
+  // While the kid's coins/gems/streak load from Supabase, show a spinning coin
+  // instead of flashing zeros.
+    if (loading || !minTimePassed) {
+    return <CoinLoader />;
+  }
 
   return (
     <main
@@ -368,6 +371,32 @@ export default function Home() {
       )}
 
     </main>
+  );
+}
+
+// ============================================
+// COIN LOADER — spinning coin while data loads
+// ============================================
+
+function CoinLoader() {
+  return (
+    <div style={{ width: "100%", height: "100vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 16, background: "linear-gradient(to bottom, #5BB8F5, #C9EEFF)" }}>
+      <div style={{ animation: "coinSpin 1s linear infinite" }}>
+        <svg width="64" height="64" viewBox="0 0 24 24">
+          <ellipse cx="12" cy="12" rx="11" ry="11" fill="#F5C842" stroke="#C49A1A" strokeWidth="1.5"/>
+          <ellipse cx="12" cy="12" rx="8" ry="8" fill="#FFE066" stroke="#C49A1A" strokeWidth="1"/>
+          <ellipse cx="10" cy="10" rx="3" ry="3" fill="#FFE899" opacity="0.7"/>
+          <text x="12" y="16" textAnchor="middle" fontSize="9" fontWeight="bold" fill="#C47A10" fontFamily="serif">$</text>
+        </svg>
+      </div>
+      <span style={{ fontFamily: "var(--font-game)", fontSize: 18, color: "white", textShadow: "0 2px 6px rgba(0,0,0,0.2)" }}>Loading...</span>
+      <style>{`
+        @keyframes coinSpin {
+          0%   { transform: rotateY(0deg); }
+          100% { transform: rotateY(360deg); }
+        }
+      `}</style>
+    </div>
   );
 }
 
