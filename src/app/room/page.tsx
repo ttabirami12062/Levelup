@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useGame } from "@/lib/gameContext";
+import { supabase } from "@/lib/supabase";
 
 const CANVAS_W = 700;
 const CANVAS_H = 460;
@@ -23,9 +24,6 @@ const ROOM_UNLOCK_STREAK: Record<number, number> = {
   3: 10,
   4: 20,
 };
-
-const getStorageKey = (roomId: number) => `levelup_flat_room_${roomId}`;
-const OWNED_KEY = "levelup_flat_owned";
 
 export interface ShopItem {
   id: string;
@@ -62,7 +60,7 @@ export const ALL_ITEMS: ShopItem[] = [
   { id: "floorplant", name: "Floor Plant",  category: "floor",     price: 60,  currency: "coins", footprint: { w: 1, d: 1 } },
   { id: "trophy",     name: "Trophy",       category: "special",   price: 3,   currency: "gems",  footprint: { w: 1, d: 1 } },
   { id: "galaxy",     name: "Galaxy Map",   category: "special",   price: 8,   currency: "gems",  footprint: { w: 1, d: 1 } },
-  { id: "wand",       name: "Magic Wand",   category: "special",   price: 300, currency: "coins", footprint: { w: 1, d: 1 } },
+  { id: "wand",       name: "Magic Wand",   category: "special",   price: 200, currency: "coins", footprint: { w: 1, d: 1 } },
   { id: "sortinghat", name: "Sorting Hat",  category: "special",   price: 2,   currency: "gems",  footprint: { w: 1, d: 1 } },
   { id: "snitch",     name: "Golden Winged Ball", category: "special", price: 4, currency: "gems", footprint: { w: 1, d: 1 } },
   { id: "wizardmap",  name: "Wizards Map",  category: "special",   price: 250, currency: "coins", footprint: { w: 1, d: 1 } },
@@ -81,6 +79,29 @@ export const ALL_ITEMS: ShopItem[] = [
 ];
 
 const FREE_ITEMS = ["bed", "desk", "plant", "door", "window", "rug"];
+
+// Default layouts per room, used when a kid has no saved data yet.
+const DEFAULT_ROOM_ITEMS: Record<number, PlacedItem[]> = {
+  1: [
+    { itemId: "rug",    x: 0.5,  y: 0.80 },
+    { itemId: "bed",    x: 0.26, y: 0.74 },
+    { itemId: "window", x: 0.72, y: 0.30 },
+    { itemId: "door",   x: 0.92, y: 0.55 },
+    { itemId: "plant",  x: 0.10, y: 0.86 },
+  ],
+  2: [
+    { itemId: "window", x: 0.30, y: 0.30 },
+    { itemId: "door",   x: 0.90, y: 0.55 },
+  ],
+  3: [
+    { itemId: "window", x: 0.30, y: 0.30 },
+    { itemId: "door",   x: 0.90, y: 0.55 },
+  ],
+  4: [
+    { itemId: "window", x: 0.30, y: 0.30 },
+    { itemId: "door",   x: 0.90, y: 0.55 },
+  ],
+};
 
 // Flat layout stores a free x/y position as a fraction (0-1) of the canvas.
 interface PlacedItem { itemId: string; x: number; y: number; }
@@ -101,35 +122,84 @@ function RoomContent() {
   const [ownedItems, setOwnedItems]   = useState<string[]>(FREE_ITEMS);
   const [selected, setSelected]       = useState<string | null>(null);
   const [dragging, setDragging]       = useState<string | null>(null);
+  const [loaded, setLoaded]           = useState(false);
+  // The full room_items object for this kid: { "1": [...], "2": [...], ... }
+  const allRoomsRef = useRef<Record<string, PlacedItem[]>>({});
   const stageRef = useRef<HTMLDivElement>(null);
 
+  // ── LOAD THIS KID'S ROOMS FROM SUPABASE ──
   useEffect(() => {
-    const saved = localStorage.getItem(getStorageKey(roomId));
-    const owned = localStorage.getItem(OWNED_KEY);
-    if (saved) {
-      setPlacedItems(JSON.parse(saved));
-    } else if (roomId === 1) {
-      setPlacedItems([
-        { itemId: "rug",    x: 0.5,  y: 0.80 },
-        { itemId: "bed",    x: 0.26, y: 0.74 },
-        { itemId: "window", x: 0.72, y: 0.30 },
-        { itemId: "door",   x: 0.92, y: 0.55 },
-        { itemId: "plant",  x: 0.10, y: 0.86 },
-      ]);
-    } else {
-      setPlacedItems([
-        { itemId: "window", x: 0.30, y: 0.30 },
-        { itemId: "door",   x: 0.90, y: 0.55 },
-      ]);
-    }
-    if (owned) setOwnedItems([...new Set([...FREE_ITEMS, ...JSON.parse(owned)])]);
+    const load = async () => {
+      setLoaded(false);
+      const profileId = localStorage.getItem("levelup_active_profile");
+      if (!profileId) {
+        // No active profile — fall back to defaults so the page still works.
+        setPlacedItems(DEFAULT_ROOM_ITEMS[roomId] || []);
+        setOwnedItems(FREE_ITEMS);
+        setLoaded(true);
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from("rooms")
+        .select("owned_items, room_items")
+        .eq("profile_id", profileId)
+        .single();
+
+      if (data && !error) {
+        // Existing row — pull this room's slice and the owned list.
+        const allRooms = (data.room_items as Record<string, PlacedItem[]>) || {};
+        allRoomsRef.current = allRooms;
+        const thisRoom = allRooms[String(roomId)] ?? DEFAULT_ROOM_ITEMS[roomId] ?? [];
+        setPlacedItems(thisRoom);
+
+        const owned = (data.owned_items as string[]) || [];
+        setOwnedItems([...new Set([...FREE_ITEMS, ...owned])]);
+      } else {
+        // No row yet — create one seeded with default layouts for all rooms.
+        const seeded: Record<string, PlacedItem[]> = {
+          "1": DEFAULT_ROOM_ITEMS[1],
+          "2": DEFAULT_ROOM_ITEMS[2],
+          "3": DEFAULT_ROOM_ITEMS[3],
+          "4": DEFAULT_ROOM_ITEMS[4],
+        };
+        allRoomsRef.current = seeded;
+        await supabase.from("rooms").insert({
+          profile_id:   profileId,
+          owned_items:  FREE_ITEMS,
+          room_items:   seeded,
+          room_version: "v2",
+        });
+        setPlacedItems(seeded[String(roomId)] || []);
+        setOwnedItems(FREE_ITEMS);
+      }
+
+      setLoaded(true);
+    };
+
+    load();
   }, [roomId]);
 
+  // ── SAVE THIS ROOM'S LAYOUT BACK TO SUPABASE ──
+  // Updates this room's slice inside the combined object, then writes the row.
   useEffect(() => {
-    if (placedItems.length > 0) {
-      localStorage.setItem(getStorageKey(roomId), JSON.stringify(placedItems));
-    }
-  }, [placedItems, roomId]);
+    if (!loaded) return; // don't save until the initial load is done
+    const profileId = localStorage.getItem("levelup_active_profile");
+    if (!profileId) return;
+
+    allRoomsRef.current = { ...allRoomsRef.current, [String(roomId)]: placedItems };
+
+    supabase
+      .from("rooms")
+      .update({
+        room_items: allRoomsRef.current,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("profile_id", profileId)
+      .then(({ error }) => {
+        if (error) console.error("Failed to save room:", error.message);
+      });
+  }, [placedItems, roomId, loaded]);
 
   const eventToFraction = (clientX: number, clientY: number) => {
     const el = stageRef.current;

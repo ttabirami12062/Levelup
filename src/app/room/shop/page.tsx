@@ -3,12 +3,13 @@
 import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useGame } from "@/lib/gameContext";
+import { supabase } from "@/lib/supabase";
 import { ALL_ITEMS, ShopItem } from "../page";
 
-const FREE_ITEMS = ["bed", "desk", "plant", "window", "rug"];
-const OWNED_KEY = "levelup_flat_owned";
-const getRoomKey = (roomId: number) => `levelup_flat_room_${roomId}`;
+const FREE_ITEMS = ["bed", "desk", "plant", "door", "window", "rug"];
 type Category = "furniture" | "walls" | "floor" | "special" | "garden";
+
+interface PlacedItem { itemId: string; x: number; y: number; }
 
 function ShopContent() {
   const router       = useRouter();
@@ -18,17 +19,31 @@ function ShopContent() {
   const roomId = Number(searchParams.get("id")) || 1;
 
   const [ownedItems, setOwnedItems]     = useState<string[]>(FREE_ITEMS);
+  const [allRooms, setAllRooms]         = useState<Record<string, PlacedItem[]>>({});
   const [selectedItem, setSelectedItem] = useState<ShopItem | null>(null);
   const [category, setCategory]         = useState<Category>("furniture");
   const [buyMessage, setBuyMessage]     = useState<string | null>(null);
   const [buySuccess, setBuySuccess]     = useState(false);
 
+  // Load the kid's owned list + room layouts from Supabase.
   useEffect(() => {
-    const saved = localStorage.getItem(OWNED_KEY);
-    if (saved) {
-      const parsed = JSON.parse(saved);
-      setOwnedItems([...new Set([...FREE_ITEMS, ...parsed])]);
-    }
+    const load = async () => {
+      const profileId = localStorage.getItem("levelup_active_profile");
+      if (!profileId) return;
+
+      const { data, error } = await supabase
+        .from("rooms")
+        .select("owned_items, room_items")
+        .eq("profile_id", profileId)
+        .single();
+
+      if (data && !error) {
+        const owned = (data.owned_items as string[]) || [];
+        setOwnedItems([...new Set([...FREE_ITEMS, ...owned])]);
+        setAllRooms((data.room_items as Record<string, PlacedItem[]>) || {});
+      }
+    };
+    load();
   }, []);
 
   const filteredItems = ALL_ITEMS.filter(i => i.category === category);
@@ -57,15 +72,30 @@ function ShopContent() {
 
     const newOwned = [...ownedItems, selectedItem.id];
     setOwnedItems(newOwned);
-    localStorage.setItem(OWNED_KEY, JSON.stringify(newOwned.filter(id => !FREE_ITEMS.includes(id))));
 
-    // Drop the new item into the flat room at the default centre spot.
-    const placedKey = getRoomKey(roomId);
-    const existing  = localStorage.getItem(placedKey);
-    const placed    = existing ? JSON.parse(existing) : [];
-    if (!placed.find((p: { itemId: string }) => p.itemId === selectedItem.id)) {
+    // Drop the new item into the current room's layout at the default centre spot.
+    const roomKey = String(roomId);
+    const placed  = allRooms[roomKey] ? [...allRooms[roomKey]] : [];
+    if (!placed.find(p => p.itemId === selectedItem.id)) {
       placed.push({ itemId: selectedItem.id, x: 0.5, y: 0.7 });
-      localStorage.setItem(placedKey, JSON.stringify(placed));
+    }
+    const nextRooms = { ...allRooms, [roomKey]: placed };
+    setAllRooms(nextRooms);
+
+    // Save both the owned list and the updated room layouts to Supabase.
+    const profileId = localStorage.getItem("levelup_active_profile");
+    if (profileId) {
+      supabase
+        .from("rooms")
+        .update({
+          owned_items: newOwned.filter(id => !FREE_ITEMS.includes(id)),
+          room_items:  nextRooms,
+          updated_at:  new Date().toISOString(),
+        })
+        .eq("profile_id", profileId)
+        .then(({ error }) => {
+          if (error) console.error("Failed to save purchase:", error.message);
+        });
     }
 
     setBuyMessage(`${selectedItem.name} added to your room!`);
