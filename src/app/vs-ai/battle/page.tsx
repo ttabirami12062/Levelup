@@ -102,6 +102,8 @@ function BattleScreen() {
   const zetaTimerRef   = useRef<ReturnType<typeof setTimeout> | null>(null);
   const levelRef       = useRef(1);
   const worldHRef      = useRef(0);
+  // Tracks stones already handled so the same stone can't be counted twice.
+  const processedRef   = useRef<Set<number>>(new Set());
 
   useEffect(() => { equationRef.current   = equation;  }, [equation]);
   useEffect(() => { avatarLaneRef.current = avatarLane; }, [avatarLane]);
@@ -183,13 +185,19 @@ function BattleScreen() {
           setZetaScore(zetaScoreRef.current);
           setZetaReaction("correct");
 
-          // Mark stone as collected by Zeta
+          // Mark Zeta's stone correct and freeze the rest of the wave so the
+          // player can't hit a stone during Zeta's reset window.
           setStones(prev => prev.map(s =>
-            s.id === answerStone.id ? { ...s, status: "correct" as const, collected: true } : s
+            s.id === answerStone.id
+              ? { ...s, status: "correct" as const, collected: true }
+              : { ...s, collected: true }
           ));
           stonesRef.current = stonesRef.current.map(s =>
-            s.id === answerStone.id ? { ...s, status: "correct" as const, collected: true } : s
+            s.id === answerStone.id
+              ? { ...s, status: "correct" as const, collected: true }
+              : { ...s, collected: true }
           );
+          stonesRef.current.forEach(s => processedRef.current.add(s.id));
 
           // Zeta reaction after collecting
           setTimeout(() => {
@@ -220,6 +228,7 @@ function BattleScreen() {
             setTimerWidth(100);
             setStones([]);
             stonesRef.current = [];
+            processedRef.current.clear();
           }, 450);
 
           if (gamePhaseRef.current === "playing") scheduleZeta();
@@ -233,6 +242,10 @@ function BattleScreen() {
   }, [zetaSpeed, checkWin, getLaneX]);
 
   const handleCollect = useCallback((stone: Stone) => {
+    // Guard: never process the same stone twice (fixes double-count).
+    if (processedRef.current.has(stone.id)) return;
+    processedRef.current.add(stone.id);
+
     if (stone.value !== equationRef.current.answer) {
       setStones(prev => prev.map(s =>
         s.id === stone.id ? { ...s, status: "wrong" as const, collected: true } : s
@@ -260,12 +273,19 @@ function BattleScreen() {
     }]);
     setTimeout(() => setRewardPops(prev => prev.filter(p => p.id !== popId)), 800);
 
+    // Mark the chosen stone correct and freeze the rest of the wave so the
+    // avatar can't trigger a wrong hit during the 450ms reset window.
     setStones(prev => prev.map(s =>
-      s.id === stone.id ? { ...s, status: "correct" as const, collected: true } : s
+      s.id === stone.id
+        ? { ...s, status: "correct" as const, collected: true }
+        : { ...s, collected: true }
     ));
     stonesRef.current = stonesRef.current.map(s =>
-      s.id === stone.id ? { ...s, status: "correct" as const, collected: true } : s
+      s.id === stone.id
+        ? { ...s, status: "correct" as const, collected: true }
+        : { ...s, collected: true }
     );
+    stonesRef.current.forEach(s => processedRef.current.add(s.id));
 
     if (playerScoreRef.current % 3 === 0) {
       levelRef.current = Math.min(levelRef.current + 1, 10);
@@ -280,6 +300,7 @@ function BattleScreen() {
       setTimerWidth(100);
       setStones([]);
       stonesRef.current = [];
+      processedRef.current.clear();
     }, 450);
 
     checkWin(playerScoreRef.current, zetaScoreRef.current);
@@ -306,7 +327,7 @@ function BattleScreen() {
         const avatarCenterY = (avatarTop + avatarBot) / 2;
         const vertHit  = Math.abs(stoneCenterY - avatarCenterY) < 30;
         const horizHit = stone.lane === avatarLaneRef.current;
-        if (vertHit && horizHit && !stone.collected) {
+        if (vertHit && horizHit && !stone.collected && !processedRef.current.has(stone.id)) {
           setTimeout(() => handleCollect({ ...stone, y: newY }), 0);
           return { ...stone, y: newY, collected: true };
         }
@@ -327,6 +348,7 @@ function BattleScreen() {
       setEquation(newEq);
       setStones([]);
       stonesRef.current = [];
+      processedRef.current.clear();
     }
 
     animFrameRef.current = requestAnimationFrame(gameLoop);

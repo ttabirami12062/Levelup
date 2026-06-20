@@ -71,6 +71,10 @@ const STONE_SPEED    = 1.0;
 const SPAWN_INTERVAL = 2800;
 const AVATAR_BOTTOM  = 150;
 
+// How many correct answers earn a reward, and how many wrong answers cost a coin.
+const REWARD_EVERY  = 3;
+const PENALTY_EVERY = 2;
+
 const HINT_FACTS = [
   { fact: "Zero was invented in ancient India around 500 AD!", hint: "Break the problem into smaller steps." },
   { fact: "The equals sign = was invented in 1557!", hint: "Try counting up from the smaller number." },
@@ -100,6 +104,7 @@ export default function SoloGame() {
   const [coinLost, setCoinLost]         = useState(false);
   const [gemFlash, setGemFlash]         = useState(false);
   const [rewardFlash, setRewardFlash]   = useState<string | null>(null);
+  const [gemCelebration, setGemCelebration] = useState(false);
 
   const stonesRef       = useRef<Stone[]>([]);
   const equationRef     = useRef<Equation>(equation);
@@ -116,6 +121,9 @@ export default function SoloGame() {
   const sessionCoinsRef = useRef(0);
   const sessionGemsRef  = useRef(0);
   const worldHRef       = useRef(0);
+  // Tracks which stone ids have already been processed, so the same stone
+  // can never be counted twice (this was the "jumps by 2" bug).
+  const processedRef    = useRef<Set<number>>(new Set());
 
   useEffect(() => { equationRef.current   = equation;  }, [equation]);
   useEffect(() => { avatarLaneRef.current = avatarLane; }, [avatarLane]);
@@ -159,42 +167,48 @@ export default function SoloGame() {
   }, []);
 
   // ── HANDLE COLLECT ──
-  // Rewards only given every 5 correct answers
-  // Each milestone gives a random surprise — 1 coin, 5 coins, or 1 gem
+  // Reward every REWARD_EVERY correct answers: usually +1 coin, rarely +2,
+  // very rarely a gem. Penalty every PENALTY_EVERY wrong answers: -1 coin.
   const handleCollect = useCallback((stone: Stone) => {
+    // Guard: never process the same stone twice.
+    if (processedRef.current.has(stone.id)) return;
+    processedRef.current.add(stone.id);
+
     const eq = equationRef.current;
 
     if (stone.value === eq.answer) {
       scoreRef.current++;
       setScore(scoreRef.current);
 
-      // ── REWARD EVERY 5 CORRECT ANSWERS ──
-      if (scoreRef.current % 5 === 0) {
+      // ── REWARD EVERY 3 CORRECT ANSWERS ──
+      if (scoreRef.current % REWARD_EVERY === 0) {
         const roll = Math.random();
         let rewardText = "";
         let popType: RewardPop["type"] = "coin";
 
-        if (roll > 0.85) {
-          // 15% chance — rare gem
+        if (roll > 0.96) {
+          // ~4% chance — rare gem
           addGems(1);
           sessionGemsRef.current += 1;
           setSessionGems(sessionGemsRef.current);
-          rewardText = "gem!";
+          rewardText = "Wow, a gem!";
           popType = "gem";
           setGemFlash(true);
           setRewardFlash("gem");
+          setGemCelebration(true);
           setTimeout(() => { setGemFlash(false); setRewardFlash(null); }, 1200);
-        } else if (roll > 0.5) {
-          // 35% chance — 5 coins
-          addCoins(5);
-          sessionCoinsRef.current += 5;
+          setTimeout(() => setGemCelebration(false), 1800);
+        } else if (roll > 0.82) {
+          // ~14% chance — 2 coins
+          addCoins(2);
+          sessionCoinsRef.current += 2;
           setSessionCoins(sessionCoinsRef.current);
-          rewardText = "+5 coins!";
+          rewardText = "+2 coins!";
           popType = "coins";
           setRewardFlash("coins");
           setTimeout(() => setRewardFlash(null), 1200);
         } else {
-          // 50% chance — 1 coin
+          // ~82% chance — 1 coin
           addCoins(1);
           sessionCoinsRef.current += 1;
           setSessionCoins(sessionCoinsRef.current);
@@ -214,17 +228,25 @@ export default function SoloGame() {
         }]);
         setTimeout(() => setRewardPops(prev => prev.filter(p => p.id !== popId)), 1000);
       }
-
-      // Mark stone correct
+      // Mark the chosen stone correct, and freeze every other stone in the
+      // wave (mark them collected) so the avatar can't trigger a wrong hit
+      // during the 500ms reset window.
       setStones(prev => prev.map(s =>
-        s.id === stone.id ? { ...s, status: "correct" as const, collected: true } : s
+        s.id === stone.id
+          ? { ...s, status: "correct" as const, collected: true }
+          : { ...s, collected: true }
       ));
       stonesRef.current = stonesRef.current.map(s =>
-        s.id === stone.id ? { ...s, status: "correct" as const, collected: true } : s
+        s.id === stone.id
+          ? { ...s, status: "correct" as const, collected: true }
+          : { ...s, collected: true }
       );
+      // Also block them in the processed set so the collision check ignores them.
+      stonesRef.current.forEach(s => processedRef.current.add(s.id));
 
-      // Level up every 5 correct
-      if (scoreRef.current % 5 === 0) {
+
+      // Level up every 3 correct
+      if (scoreRef.current % REWARD_EVERY === 0) {
         levelRef.current = Math.min(levelRef.current + 1, 10);
         setLevel(levelRef.current);
       }
@@ -237,6 +259,7 @@ export default function SoloGame() {
         setTimerWidth(100);
         setStones([]);
         stonesRef.current = [];
+        processedRef.current.clear();
         spawnTimerRef.current = SPAWN_INTERVAL;
       }, 500);
 
@@ -244,8 +267,8 @@ export default function SoloGame() {
       // Wrong answer
       negRef.current++;
 
-      // Every 5 wrong answers — lose 1 coin
-      if (negRef.current % 5 === 0) {
+      // Every 2 wrong answers — lose 1 coin
+      if (negRef.current % PENALTY_EVERY === 0) {
         addCoins(-1);
         sessionCoinsRef.current = Math.max(0, sessionCoinsRef.current - 1);
         setSessionCoins(sessionCoinsRef.current);
@@ -305,7 +328,9 @@ export default function SoloGame() {
         const avatarCenterY = (avatarTop + avatarBot) / 2;
         const vertHit  = Math.abs(stoneCenterY - avatarCenterY) < 30;
         const horizHit = stone.lane === avatarLaneRef.current;
-        if (vertHit && horizHit && !stone.collected) {
+        if (vertHit && horizHit && !stone.collected && !processedRef.current.has(stone.id)) {
+          // Schedule the reward logic, but mark collected synchronously below
+          // so the next frame can't fire this same stone again.
           setTimeout(() => handleCollect({ ...stone, y: newY }), 0);
           return { ...stone, y: newY, collected: true };
         }
@@ -319,7 +344,6 @@ export default function SoloGame() {
     setTimerWidth(timerRef.current);
 
     if (timerRef.current <= 0) {
-      negRef.current++;
       timerRef.current = 100;
       setTimerWidth(100);
       const newEq = generateEquation(levelRef.current);
@@ -327,6 +351,7 @@ export default function SoloGame() {
       setEquation(newEq);
       setStones([]);
       stonesRef.current = [];
+      processedRef.current.clear();
     }
 
     animFrameRef.current = requestAnimationFrame(gameLoop);
@@ -430,7 +455,7 @@ export default function SoloGame() {
             {/* Score counter — shows progress to next reward */}
             <div style={{ background: "rgba(255,255,255,0.1)", borderRadius: 99, padding: "4px 10px" }}>
               <span style={{ fontFamily: "var(--font-game)", fontSize: 12, color: "rgba(255,255,255,0.7)" }}>
-                {score % 5}/5
+                {score % REWARD_EVERY}/{REWARD_EVERY}
               </span>
             </div>
 
@@ -454,7 +479,7 @@ export default function SoloGame() {
               </span>
               {coinLost && <span style={{ fontFamily: "var(--font-game)", fontSize: 11, color: "#E85454" }}>−1!</span>}
               {(rewardFlash === "coin") && <span style={{ fontFamily: "var(--font-game)", fontSize: 11, color: "#FFD700" }}>+1!</span>}
-              {(rewardFlash === "coins") && <span style={{ fontFamily: "var(--font-game)", fontSize: 11, color: "#FFD700" }}>+5!</span>}
+              {(rewardFlash === "coins") && <span style={{ fontFamily: "var(--font-game)", fontSize: 11, color: "#FFD700" }}>+2!</span>}
             </div>
 
             {/* Gem badge */}
@@ -571,6 +596,30 @@ export default function SoloGame() {
           <AvatarSVG />
         </div>
 
+        {/* Gem celebration overlay — fades in and out */}
+        {gemCelebration && (
+          <div
+            style={{
+              position: "absolute",
+              inset: 0,
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              justifyContent: "center",
+              zIndex: 40,
+              pointerEvents: "none",
+              animation: "gemFade 1.8s ease forwards",
+            }}
+          >
+            <div style={{ filter: "drop-shadow(0 0 24px rgba(196,174,255,0.9))", animation: "gemPop 1.8s ease forwards" }}>
+              <GemSVG size={96} />
+            </div>
+            <div style={{ fontFamily: "var(--font-game)", fontSize: "clamp(1.6rem, 6vw, 2.4rem)", color: "#C4AEFF", textShadow: "0 3px 12px rgba(0,0,0,0.6)", marginTop: 14 }}>
+              Wow, you got a gem!
+            </div>
+          </div>
+        )}
+
         {/* Countdown overlay */}
         {gamePhase === "countdown" && (
           <div style={{ position: "absolute", inset: 0, background: "rgba(26,26,46,0.75)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", zIndex: 50 }}>
@@ -578,7 +627,7 @@ export default function SoloGame() {
               {countdown > 0 ? countdown : "GO!"}
             </div>
             <div style={{ fontFamily: "var(--font-game)", fontSize: "clamp(1rem, 3vw, 1.4rem)", color: "rgba(255,255,255,0.8)", marginTop: 16, textAlign: "center", padding: "0 20px" }}>
-              every 5 correct answers earns a reward!
+              every 3 correct answers earns a reward!
             </div>
           </div>
         )}
@@ -658,6 +707,18 @@ export default function SoloGame() {
         @keyframes floatUp {
           0%   { opacity: 1; transform: translateY(0) scale(1); }
           100% { opacity: 0; transform: translateY(-80px) scale(1.3); }
+        }
+        @keyframes gemFade {
+          0%   { opacity: 0; }
+          15%  { opacity: 1; }
+          75%  { opacity: 1; }
+          100% { opacity: 0; }
+        }
+        @keyframes gemPop {
+          0%   { transform: scale(0.4) rotate(-12deg); }
+          40%  { transform: scale(1.15) rotate(6deg); }
+          60%  { transform: scale(1) rotate(0deg); }
+          100% { transform: scale(1) rotate(0deg); }
         }
       `}</style>
     </main>
