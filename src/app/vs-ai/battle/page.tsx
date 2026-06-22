@@ -104,6 +104,9 @@ function BattleScreen() {
   const worldHRef      = useRef(0);
   // Tracks stones already handled so the same stone can't be counted twice.
   const processedRef   = useRef<Set<number>>(new Set());
+  // Locks the current wave the instant someone scores, so the loser of that
+  // wave (player OR Zeta) can't also score on the same equation.
+  const waveDecidedRef = useRef(false);
 
   useEffect(() => { equationRef.current   = equation;  }, [equation]);
   useEffect(() => { avatarLaneRef.current = avatarLane; }, [avatarLane]);
@@ -180,6 +183,9 @@ function BattleScreen() {
         // Short delay then Zeta collects it
         setTimeout(() => {
           if (gamePhaseRef.current !== "playing") return;
+          // If the player already won this wave, Zeta gets nothing.
+          if (waveDecidedRef.current) return;
+          waveDecidedRef.current = true;
 
           zetaScoreRef.current++;
           setZetaScore(zetaScoreRef.current);
@@ -229,6 +235,7 @@ function BattleScreen() {
             setStones([]);
             stonesRef.current = [];
             processedRef.current.clear();
+            waveDecidedRef.current = false;
           }, 450);
 
           if (gamePhaseRef.current === "playing") scheduleZeta();
@@ -262,6 +269,10 @@ function BattleScreen() {
 
     playerScoreRef.current++;
     setPlayerScore(playerScoreRef.current);
+    // Lock this wave so Zeta's pending timer can't also score on it, and
+    // cancel that timer outright.
+    waveDecidedRef.current = true;
+    if (zetaTimerRef.current) clearTimeout(zetaTimerRef.current);
     setZetaReaction(playerScoreRef.current > zetaScoreRef.current ? "losing" : "winning");
 
     const popId = Date.now();
@@ -301,10 +312,13 @@ function BattleScreen() {
       setStones([]);
       stonesRef.current = [];
       processedRef.current.clear();
+      waveDecidedRef.current = false;
+      // Player cancelled Zeta's timer above, so re-arm it for the new wave.
+      if (gamePhaseRef.current === "playing") scheduleZeta();
     }, 450);
 
     checkWin(playerScoreRef.current, zetaScoreRef.current);
-  }, [getLaneX, checkWin]);
+  }, [getLaneX, checkWin, scheduleZeta]);
 
   const gameLoop = useCallback((timestamp: number) => {
     if (gamePhaseRef.current !== "playing") return;
@@ -362,6 +376,7 @@ function BattleScreen() {
       equationRef.current = firstEq;
       setGamePhase("playing");
       gamePhaseRef.current = "playing";
+      waveDecidedRef.current = false;
       lastTimeRef.current = performance.now();
       animFrameRef.current = requestAnimationFrame(gameLoop);
       scheduleZeta();
