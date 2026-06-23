@@ -22,7 +22,7 @@ const DIFFICULTIES = [
     shadow: "#3A30A8",
     bg: "#7B6FE8",
     reward: 3,
-    zetaSpeed: 5000,
+    zetaSpeed: 4500,
   },
   {
     id: "hard",
@@ -32,7 +32,7 @@ const DIFFICULTIES = [
     shadow: "#A02020",
     bg: "#1A1A2E",
     reward: 5,
-    zetaSpeed: 3000,
+    zetaSpeed: 2600,
   },
 ];
 
