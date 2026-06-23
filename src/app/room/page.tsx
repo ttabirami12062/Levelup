@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, Suspense } from "react";
+import { useState, useEffect, useRef, Suspense, type JSX } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useGame } from "@/lib/gameContext";
 import { supabase } from "@/lib/supabase";
