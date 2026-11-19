@@ -11,6 +11,7 @@ export default function LoginPage() {
   const [mode, setMode] = useState<'signin' | 'signup'>('signup');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [password2, setPassword2] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
@@ -31,6 +32,19 @@ export default function LoginPage() {
     }
   }
 
+  function switchMode(next: 'signin' | 'signup') {
+    setMode(next);
+    setError('');
+    setNotice('');
+    setPassword('');
+    setPassword2('');
+  }
+
+  // The two modes get different colors and icons so they're easy to tell apart.
+  const theme = mode === 'signup'
+    ? { main: '#5DBE4A', dark: '#3D9E2A', button: '#5DBE4A', buttonShadow: '#3D9E2A', buttonText: '#FFFFFF' }
+    : { main: '#7B6FE8', dark: '#5a4fc4', button: '#F5C842', buttonShadow: '#c99e1f', buttonText: '#5a4500' };
+
   async function handleSubmit() {
     setError('');
     setNotice('');
@@ -44,6 +58,10 @@ export default function LoginPage() {
     // passwords made before these rules still work.
     if (mode === 'signup' && !PASSWORD_RULES.every((r) => r.test(password))) {
       setError('Your password needs to tick every box below.');
+      return;
+    }
+    if (mode === 'signup' && password !== password2) {
+      setError("The two passwords don't match.");
       return;
     }
     if (password.length < 6) {
@@ -63,6 +81,14 @@ export default function LoginPage() {
       });
       if (error) {
         setError(friendlyAuthError(error.message));
+        setLoading(false);
+        return;
+      }
+      // For an email that's already registered, Supabase pretends it worked but
+      // returns a user with no identities, so point them to sign in instead.
+      if (data.user && data.user.identities?.length === 0) {
+        switchMode('signin');
+        setNotice('This email already has an account. Sign in below!');
         setLoading(false);
         return;
       }
@@ -115,30 +141,59 @@ export default function LoginPage() {
           background: '#fff',
           borderRadius: 28,
           padding: '32px 26px',
-          border: '4px solid #7B6FE8',
-          boxShadow: '0 8px 0 #5a4fc4, 0 14px 24px rgba(0,0,0,0.18)',
+          border: `4px solid ${theme.main}`,
+          boxShadow: `0 8px 0 ${theme.dark}, 0 14px 24px rgba(0,0,0,0.18)`,
+          transition: 'border-color 0.2s, box-shadow 0.2s',
         }}
       >
-        {/* lock badge */}
-        <div style={{ textAlign: 'center', marginBottom: 18 }}>
+        {/* sign in / create account tabs */}
+        <div style={{ display: 'flex', background: '#F0F0F8', borderRadius: 16, padding: 4, marginBottom: 20 }}>
+          {(['signin', 'signup'] as const).map((m) => {
+            const active = mode === m;
+            const color = m === 'signup' ? '#5DBE4A' : '#7B6FE8';
+            return (
+              <button
+                key={m}
+                onClick={() => switchMode(m)}
+                style={{
+                  flex: 1, border: 'none', borderRadius: 12, padding: '10px 6px', cursor: 'pointer',
+                  fontFamily: 'var(--font-game)', fontSize: 15,
+                  background: active ? color : 'transparent', color: active ? 'white' : '#8A8AA5',
+                  boxShadow: active ? '0 3px 0 rgba(0,0,0,0.15)' : 'none', transition: 'all 0.15s',
+                }}
+              >
+                {m === 'signin' ? 'Sign in' : 'Create account'}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* badge */}
+        <div style={{ textAlign: 'center', marginBottom: 14 }}>
           <div
             style={{
-              width: 72,
-              height: 72,
-              borderRadius: '50%',
-              background: '#7B6FE8',
-              display: 'inline-flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              border: '4px solid #5a4fc4',
-              boxShadow: '0 4px 0 #5a4fc4',
+              width: 68, height: 68, borderRadius: '50%', background: theme.main,
+              display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+              border: `4px solid ${theme.dark}`, boxShadow: `0 4px 0 ${theme.dark}`,
             }}
           >
-            <svg width="34" height="34" viewBox="0 0 24 24" fill="none">
-              <rect x="4" y="10" width="16" height="11" rx="3" fill="#F5C842" />
-              <path d="M8 10V7a4 4 0 0 1 8 0v3" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" />
-              <circle cx="12" cy="15" r="1.8" fill="#7B6FE8" />
-            </svg>
+            {mode === 'signup' ? (
+              // a little family: one grown-up, two kids
+              <svg width="38" height="32" viewBox="0 0 38 32">
+                <circle cx="19" cy="7" r="5" fill="#FFE066" />
+                <path d="M11 30 Q11 15 19 15 Q27 15 27 30 Z" fill="white" />
+                <circle cx="6.5" cy="14" r="3.8" fill="#FFE066" />
+                <path d="M1 30 Q1 20 6.5 20 Q12 20 12 30 Z" fill="#FFB3C6" />
+                <circle cx="31.5" cy="14" r="3.8" fill="#FFE066" />
+                <path d="M26 30 Q26 20 31.5 20 Q37 20 37 30 Z" fill="#C4AEFF" />
+              </svg>
+            ) : (
+              <svg width="34" height="34" viewBox="0 0 24 24" fill="none">
+                <rect x="4" y="10" width="16" height="11" rx="3" fill="#F5C842" />
+                <path d="M8 10V7a4 4 0 0 1 8 0v3" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" />
+                <circle cx="12" cy="15" r="1.8" fill="#7B6FE8" />
+              </svg>
+            )}
           </div>
         </div>
 
@@ -151,10 +206,10 @@ export default function LoginPage() {
             margin: '0 0 4px',
           }}
         >
-          {mode === 'signup' ? 'Grown-up sign up' : 'Welcome back!'}
+          {mode === 'signup' ? 'Create a family account' : 'Welcome back!'}
         </h1>
         <p style={{ textAlign: 'center', color: '#7a7a90', fontSize: 14, margin: '0 0 22px' }}>
-          {mode === 'signup' ? "Keeps your kid's progress safe" : 'Sign in to keep playing'}
+          {mode === 'signup' ? 'One grown-up account for all your kids' : "Sign in to see your kids' progress"}
         </p>
 
         {/* Continue with Google */}
@@ -185,7 +240,7 @@ export default function LoginPage() {
             <path fill="#FBBC05" d="M3.97 10.72a5.4 5.4 0 0 1 0-3.44V4.95H.96a9 9 0 0 0 0 8.1l3.01-2.33z" />
             <path fill="#EA4335" d="M9 3.58c1.32 0 2.5.45 3.44 1.35l2.58-2.58C13.46.89 11.42 0 9 0A9 9 0 0 0 .96 4.95l3.01 2.33C4.68 5.16 6.66 3.58 9 3.58z" />
           </svg>
-          Continue with Google
+          {mode === 'signup' ? 'Sign up with Google' : 'Sign in with Google'}
         </button>
 
         {/* or divider */}
@@ -234,6 +289,24 @@ export default function LoginPage() {
           </div>
         )}
 
+        {mode === 'signup' && (
+          <>
+            <label style={{ display: 'block', fontSize: 13, fontWeight: 700, color: '#5a5a70', margin: '14px 0 6px' }}>
+              Type your password again
+            </label>
+            <input
+              type="password"
+              value={password2}
+              onChange={(e) => setPassword2(e.target.value)}
+              placeholder="Same password as above"
+              style={{ ...inputStyle, borderColor: password2 && password2 !== password ? '#E85454' : password2 ? '#5DBE4A' : '#d8d8e8' }}
+            />
+            <p style={{ fontSize: 12, color: '#9a9ab0', margin: '10px 0 0', textAlign: 'center' }}>
+              We&apos;ll send a link to your email to make sure it&apos;s really you.
+            </p>
+          </>
+        )}
+
         {notice && (
           <p style={{ color: '#3D9E2A', fontSize: 13, fontWeight: 700, margin: '14px 0 0', textAlign: 'center' }}>
             {notice}
@@ -252,15 +325,16 @@ export default function LoginPage() {
           style={{
             width: '100%',
             marginTop: 22,
-            background: loading ? '#f0d98a' : '#F5C842',
+            background: theme.button,
+            opacity: loading ? 0.7 : 1,
             border: 'none',
-            color: '#5a4500',
+            color: theme.buttonText,
             fontFamily: 'var(--font-game)',
             fontSize: 19,
             padding: '14px',
             borderRadius: 16,
             cursor: loading ? 'default' : 'pointer',
-            boxShadow: '0 5px 0 #c99e1f',
+            boxShadow: `0 5px 0 ${theme.buttonShadow}`,
           }}
         >
           {loading ? 'One sec…' : mode === 'signup' ? 'Create account' : 'Sign in'}
@@ -269,11 +343,8 @@ export default function LoginPage() {
         <p style={{ textAlign: 'center', fontSize: 14, color: '#7a7a90', margin: '18px 0 0' }}>
           {mode === 'signup' ? 'Already have an account? ' : 'New here? '}
           <span
-            onClick={() => {
-              setError('');
-              setMode(mode === 'signup' ? 'signin' : 'signup');
-            }}
-            style={{ color: '#7B6FE8', fontWeight: 800, cursor: 'pointer' }}
+            onClick={() => switchMode(mode === 'signup' ? 'signin' : 'signup')}
+            style={{ color: mode === 'signup' ? '#7B6FE8' : '#3D9E2A', fontWeight: 800, cursor: 'pointer' }}
           >
             {mode === 'signup' ? 'Sign in' : 'Create one'}
           </span>
