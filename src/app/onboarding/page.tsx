@@ -67,7 +67,7 @@ export default function Onboarding() {
                   {avatar.label}
                 </span>
                 {isSelected && (
-                  <div style={{ position: "absolute", top: 6, right: 6, width: 22, height: 22, background: "white", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: "bold", color: avatar.shadow, boxShadow: "0 2px 4px rgba(0,0,0,0.1)" }}>✓</div>
+                  <div style={{ position: "absolute", top: 6, right: 6, width: 22, height: 22, background: "white", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: "bold", color: avatar.shadow, boxShadow: "0 2px 4px rgba(0,0,0,0.1)" }}></div>
                 )}
               </button>
             );

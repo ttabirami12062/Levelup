@@ -182,7 +182,7 @@ function ShopContent() {
           }}
         >
           <span style={{ fontFamily: "var(--font-game)", fontSize: 20, color: "#FFE066", textShadow: "0 2px 4px rgba(0,0,0,0.3)", letterSpacing: 2 }}>
-            ✦ SHOP ✦
+            SHOP
           </span>
         </div>
       </div>
@@ -289,7 +289,7 @@ function ShopContent() {
               {/* Price or owned */}
               {owned ? (
                 <div style={{ background: "#5DBE4A", borderRadius: 99, padding: "2px 8px" }}>
-                  <span style={{ fontFamily: "var(--font-game)", fontSize: 9, color: "white" }}>✓ owned</span>
+                  <span style={{ fontFamily: "var(--font-game)", fontSize: 9, color: "white" }}>owned</span>
                 </div>
               ) : item.price === 0 ? (
                 <div style={{ background: "#5DBE4A", borderRadius: 99, padding: "2px 8px" }}>
@@ -363,7 +363,7 @@ function ShopContent() {
             : !selectedItem
             ? "select an item first"
             : ownedItems.includes(selectedItem.id)
-              ? "✓ already owned"
+              ? "already owned"
               : selectedItem.price === 0
                 ? "add to room — free!"
                 : `buy — ${selectedItem.price} ${selectedItem.currency}`}

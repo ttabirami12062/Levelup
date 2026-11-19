@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useGame } from "@/lib/gameContext";
 import { getAvatarById } from "@/components/avatar/Avatars";
+import HowToPlay from "@/components/HowToPlay";
 
 const ROOMS = [
   { id: 1, name: "Bedroom",     unlockStreak: 0  },
@@ -17,6 +18,7 @@ export default function Home() {
   const [name, setName]                       = useState("Player");
   const [avatarId, setAvatarId]               = useState(1);
   const [showMilestone, setShowMilestone]     = useState(false);
+  const [showHelp, setShowHelp]               = useState(false);
   const { coins, gems, streak, lastPlayed, loading } = useGame();
   // Keep the coin loader on screen for a brief minimum so it always shows
   // a full spin, even when Supabase responds instantly.
@@ -111,7 +113,7 @@ export default function Home() {
             </div>
           </div>
 
-          <div style={{ display: "flex", gap: 8 }}>
+          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
             <div style={{ background: "rgba(255,255,255,0.92)", borderRadius: 999, padding: "6px 12px", display: "flex", alignItems: "center", gap: 6, boxShadow: "0 2px 8px rgba(0,0,0,0.1)" }}>
               <CoinIcon size={18} />
               <span style={{ fontSize: 14, color: "#C47A10", fontFamily: "var(--font-game)" }}>{coins}</span>
@@ -120,6 +122,17 @@ export default function Home() {
               <GemIcon size={16} />
               <span style={{ fontSize: 14, color: "#6A4FC4", fontFamily: "var(--font-game)" }}>{gems}</span>
             </div>
+            <button
+              onClick={() => setShowHelp(true)}
+              aria-label="How to play"
+              style={{
+                width: 34, height: 34, borderRadius: "50%", border: "2px solid white", cursor: "pointer",
+                background: "linear-gradient(135deg, #9B7FE8, #7B6FE8)", boxShadow: "0 3px 0 #5A40B0",
+                fontFamily: "var(--font-game)", fontSize: 18, color: "white", lineHeight: 1, padding: 0,
+              }}
+            >
+              ?
+            </button>
           </div>
         </div>
 
@@ -287,6 +300,8 @@ export default function Home() {
       <div className="absolute w-full flex justify-around" style={{ bottom: 72, zIndex: 2 }}>
         <Bush /><Bush /><Bush /><Bush /><Bush /><Bush />
       </div>
+
+      <HowToPlay open={showHelp} onClose={() => setShowHelp(false)} />
 
       {/* ── MILESTONE CELEBRATION OVERLAY ── */}
       {showMilestone && (
