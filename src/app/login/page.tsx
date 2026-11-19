@@ -213,7 +213,7 @@ export default function LoginPage() {
           type="password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
-          placeholder={mode === 'signup' ? 'e.g. Sunny2024' : 'Your password'}
+          placeholder={mode === 'signup' ? 'e.g. sunnyDay24' : 'Your password'}
           style={inputStyle}
         />
 
@@ -286,7 +286,7 @@ export default function LoginPage() {
 // Shown as a live checklist under the password box when creating an account.
 const PASSWORD_RULES = [
   { label: 'At least 6 characters',      test: (p: string) => p.length >= 6 },
-  { label: 'Starts with a capital letter', test: (p: string) => /^[A-Z]/.test(p) },
+  { label: 'Has at least one capital letter', test: (p: string) => /[A-Z]/.test(p) },
   { label: 'Has at least one number',    test: (p: string) => /\d/.test(p) },
 ];
 
