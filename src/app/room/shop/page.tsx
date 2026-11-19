@@ -9,8 +9,6 @@ import { ALL_ITEMS, ShopItem } from "../page";
 const FREE_ITEMS = ["bed", "desk", "plant", "door", "window", "rug"];
 type Category = "furniture" | "walls" | "floor" | "special" | "garden";
 
-interface PlacedItem { itemId: string; x: number; y: number; }
-
 function ShopContent() {
   const router       = useRouter();
   const searchParams = useSearchParams();
@@ -19,11 +17,12 @@ function ShopContent() {
   const roomId = Number(searchParams.get("id")) || 1;
 
   const [ownedItems, setOwnedItems]     = useState<string[]>(FREE_ITEMS);
-  const [allRooms, setAllRooms]         = useState<Record<string, PlacedItem[]>>({});
   const [selectedItem, setSelectedItem] = useState<ShopItem | null>(null);
   const [category, setCategory]         = useState<Category>("furniture");
   const [buyMessage, setBuyMessage]     = useState<string | null>(null);
   const [buySuccess, setBuySuccess]     = useState(false);
+  // Buying before the owned list loads would overwrite earlier purchases.
+  const [loaded, setLoaded]             = useState(false);
 
   // Load the kid's owned list + room layouts from Supabase.
   useEffect(() => {
@@ -40,8 +39,11 @@ function ShopContent() {
       if (data && !error) {
         const owned = (data.owned_items as string[]) || [];
         setOwnedItems([...new Set([...FREE_ITEMS, ...owned])]);
-        setAllRooms((data.room_items as Record<string, PlacedItem[]>) || {});
+      } else {
+        // First visit straight to the shop: create the row so purchases have somewhere to save.
+        await supabase.from("rooms").insert({ profile_id: profileId, owned_items: [], room_items: {}, room_version: "v2" });
       }
+      setLoaded(true);
     };
     load();
   }, []);
@@ -49,7 +51,7 @@ function ShopContent() {
   const filteredItems = ALL_ITEMS.filter(i => i.category === category);
 
   const handleBuy = () => {
-    if (!selectedItem) return;
+    if (!selectedItem || !loaded) return;
     if (ownedItems.includes(selectedItem.id)) return;
 
     if (selectedItem.currency === "coins") {
@@ -98,12 +100,13 @@ function ShopContent() {
     }, 1500);
   };
 
- const CATEGORIES: { id: Category; label: string; emoji: string; color: string }[] = [
-    { id: "furniture", label: "Furniture", emoji: "🛋️", color: "#FF8FAB" },
-    { id: "walls",     label: "Walls",     emoji: "🪟", color: "#74B3FF" },
-    { id: "floor",     label: "Floor",     emoji: "🏠", color: "#78D660" },
-    { id: "special",   label: "Special",   emoji: "✨", color: "#FFD700" },
-    { id: "garden",    label: "Garden",    emoji: "🌿", color: "#5DBE4A" },
+  // Each tab shows one of its own items as the icon.
+  const CATEGORIES: { id: Category; label: string; icon: string; color: string }[] = [
+    { id: "furniture", label: "Furniture", icon: "sofa",      color: "#FF8FAB" },
+    { id: "walls",     label: "Walls",     icon: "window",    color: "#74B3FF" },
+    { id: "floor",     label: "Floor",     icon: "rug",       color: "#78D660" },
+    { id: "special",   label: "Special",   icon: "trophy",    color: "#FFD700" },
+    { id: "garden",    label: "Garden",    icon: "flowerbed", color: "#5DBE4A" },
   ];
 
   const currentCat = CATEGORIES.find(c => c.id === category)!;
@@ -219,7 +222,7 @@ function ShopContent() {
               gap: 3,
             }}
           >
-            <span style={{ fontSize: 18 }}>{cat.emoji}</span>
+            <span style={{ height: 22, display: "flex", alignItems: "center", transform: "scale(0.5)" }}><ItemSVGMini id={cat.icon} /></span>
             <span>{cat.label}</span>
           </button>
         ))}
@@ -329,7 +332,7 @@ function ShopContent() {
               color: buySuccess ? "#3D9E2A" : "#E85454",
             }}
           >
-            {buySuccess ? "🎉 " : "❌ "}{buyMessage}
+            {buyMessage}
           </div>
         )}
 
@@ -355,12 +358,14 @@ function ShopContent() {
             textShadow: "0 1px 4px rgba(0,0,0,0.15)",
           }}
         >
-          {!selectedItem
+          {!loaded
+            ? "loading your items..."
+            : !selectedItem
             ? "select an item first"
             : ownedItems.includes(selectedItem.id)
               ? "✓ already owned"
               : selectedItem.price === 0
-                ? "✨ add to room — free!"
+                ? "add to room — free!"
                 : `buy — ${selectedItem.price} ${selectedItem.currency}`}
         </button>
       </div>

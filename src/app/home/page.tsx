@@ -48,12 +48,14 @@ export default function Home() {
   const playedToday = lastPlayed === today;
 
   // Check for milestone celebration
+  // Show each milestone once per kid, not on every visit to Home that day.
   useEffect(() => {
-    const milestones = [7, 30, 100];
-    if (milestones.includes(streak) && streak > 0) {
-      setShowMilestone(true);
-    }
-  }, [streak]);
+    if (loading || ![7, 30, 100].includes(streak)) return;
+    const key = `levelup_milestone_seen_${localStorage.getItem("levelup_active_profile")}`;
+    if (localStorage.getItem(key) === String(streak)) return;
+    localStorage.setItem(key, String(streak));
+    setShowMilestone(true);
+  }, [streak, loading]);
 
   // Next milestone reward text
   const nextMilestone = streak < 7 ? 7 : streak < 30 ? 30 : streak < 100 ? 100 : null;
@@ -262,7 +264,9 @@ export default function Home() {
                 </div>
                 {!unlocked && (
                   <div style={{ fontSize: 8, color: "rgba(255,255,255,0.9)", fontFamily: "var(--font-ui)", marginTop: 3, whiteSpace: "nowrap" }}>
-                    🔒 {room.unlockStreak} day streak
+                    <span style={{ display: "inline-flex", alignItems: "center", gap: 3 }}>
+                      <LockIcon size={9} /> {room.unlockStreak} day streak
+                    </span>
                   </div>
                 )}
               </button>
@@ -338,23 +342,28 @@ export default function Home() {
               {streak === 100 && "100 DAYS! You are absolutely unstoppable!"}
             </div>
 
-            <div
-              style={{
-                background: "#FFF8E6",
-                borderRadius: 14,
-                padding: "12px 16px",
-                marginBottom: 20,
-                display: "flex",
-                justifyContent: "center",
-                alignItems: "center",
-                gap: 8,
-              }}
-            >
-              <CoinIcon size={20} />
-              <span style={{ fontFamily: "var(--font-game)", fontSize: 16, color: "#C47A10" }}>
-                +2 bonus coins earned!
-              </span>
-            </div>
+            {/* gameContext gives +2 coins on every 10th streak day, so 30 and 100 get it but 7 doesn't */}
+            {streak % 10 === 0 ? (
+              <div
+                style={{
+                  background: "#FFF8E6",
+                  borderRadius: 14,
+                  padding: "12px 16px",
+                  marginBottom: 20,
+                  display: "flex",
+                  justifyContent: "center",
+                  alignItems: "center",
+                  gap: 8,
+                }}
+              >
+                <CoinIcon size={20} />
+                <span style={{ fontFamily: "var(--font-game)", fontSize: 16, color: "#C47A10" }}>
+                  +2 bonus coins earned!
+                </span>
+              </div>
+            ) : (
+              <div style={{ height: 8 }} />
+            )}
 
             <button
               onClick={() => setShowMilestone(false)}
@@ -523,6 +532,15 @@ function RoomIcon({ id, unlocked }: { id: number; unlocked: boolean }) {
       <path d="M11 14 L11 10 C11 6 21 6 21 10 L21 14" fill="none" stroke="rgba(255,255,255,0.6)" strokeWidth="2.5" strokeLinecap="round"/>
       <ellipse cx="16" cy="21" rx="2.5" ry="2.5" fill="rgba(255,255,255,0.6)"/>
       <rect x="15" y="21" width="2" height="4" rx="1" fill="rgba(255,255,255,0.6)"/>
+    </svg>
+  );
+}
+
+function LockIcon({ size = 12 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24">
+      <path d="M7 11V8a5 5 0 0 1 10 0v3" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round"/>
+      <rect x="4" y="10" width="16" height="12" rx="3" fill="#F5C842" stroke="#C49A1A" strokeWidth="1.5"/>
     </svg>
   );
 }

@@ -11,12 +11,12 @@ Landing (`/`) → `/login` (Google or email, parent only) → `/profiles` (kid p
 - `rooms`: owned_items (jsonb array) and room_items (jsonb keyed by room id) per profile
 
 ## Game rules
-- Solo: 4 lanes, STONE_SPEED 1.0, SPAWN_INTERVAL 2800ms. Every 5 correct: level up (max 10) and a reward. Every 5 wrong: -1 coin (never below 0).
-- VS AI: rival Zeta, Easy 8000ms / Medium 5000ms / Hard 3000ms, first to 5. Rewards Easy 1c, Medium 3c, Hard 5c + 1 gem. Rematch uses `window.location.href`, not `router.push`.
+- Solo: 4 lanes, STONE_SPEED 1.0 (px per frame at 60fps, scaled by frame time), SPAWN_INTERVAL 2800ms. Every 3 correct: level up (max 10) and a reward. Every 2 wrong: -1 coin (never below 0).
+- VS AI: rival Zeta, first to 5. Settings live in `src/lib/vsAi.ts`; the battle URL carries only `?difficulty=`. Stones take a fixed time to fall (Easy 6s / Medium 7s / Hard 9s). Zeta answers at 0.8 to 1.2x that time, sometimes grabs a wrong stone, and eases off when 2+ ahead. Zeta runs on the game loop clock, so the hint screen pauses it. Rewards Easy 1c, Medium 3c, Hard 5c + 1 gem. Rematch uses `window.location.href`, not `router.push`.
 - Streak: same day no change, yesterday +1, otherwise reset to 1. Celebrations at 7, 30, 100.
 
 ## Adding a shop item
-Add it to `ALL_ITEMS` in `src/app/room/page.tsx` and draw its sprite in `FlatSprite` there. The shop imports from the room page.
+Add it to `ALL_ITEMS` in `src/app/room/page.tsx`, draw its sprite in `FlatSprite` and give it a box in `SPRITE_SIZE` (height must match the drawing's shape). The shop has its own small drawings in `ItemSVGMini` in `src/app/room/shop/page.tsx`, so draw it there too or it shows a "?".
 
 ## Design
 Sky #5BB8F5 to #C9EEFF, grass #6AC94F, purple #7B6FE8, coins #F5C842, gems #9B7FE8, correct #5DBE4A, wrong #E85454. Fonts: `var(--font-game)` (Fredoka One) and `var(--font-ui)` (Nunito). Chunky 3D cartoon look. All art is hand-written SVG, no emoji in components.

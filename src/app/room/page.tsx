@@ -125,6 +125,11 @@ function RoomContent() {
   const [loaded, setLoaded]           = useState(false);
   // The full room_items object for this kid: { "1": [...], "2": [...], ... }
   const allRoomsRef = useRef<Record<string, PlacedItem[]>>({});
+  // Which room placedItems currently belongs to. Switching tabs keeps this page
+  // mounted, so without it the old room's layout could be saved into the new room.
+  const loadedRoomRef = useRef<number | null>(null);
+  const saveTimerRef  = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pendingSaveRef = useRef<(() => void) | null>(null);
   const stageRef = useRef<HTMLDivElement>(null);
   const trayRef = useRef<HTMLDivElement>(null);
 
@@ -136,11 +141,13 @@ function RoomContent() {
   useEffect(() => {
     const load = async () => {
       setLoaded(false);
+      loadedRoomRef.current = null;
       const profileId = localStorage.getItem("levelup_active_profile");
       if (!profileId) {
         // No active profile — fall back to defaults so the page still works.
         setPlacedItems(DEFAULT_ROOM_ITEMS[roomId] || []);
         setOwnedItems(FREE_ITEMS);
+        loadedRoomRef.current = roomId;
         setLoaded(true);
         return;
       }
@@ -179,6 +186,7 @@ function RoomContent() {
         setOwnedItems(FREE_ITEMS);
       }
 
+      loadedRoomRef.current = roomId;
       setLoaded(true);
     };
 
@@ -187,24 +195,37 @@ function RoomContent() {
 
   // ── SAVE THIS ROOM'S LAYOUT BACK TO SUPABASE ──
   // Updates this room's slice inside the combined object, then writes the row.
+  // Waits until dragging pauses, so a drag is one save instead of one per pixel.
   useEffect(() => {
-    if (!loaded) return; // don't save until the initial load is done
+    if (!loaded || loadedRoomRef.current !== roomId) return;
     const profileId = localStorage.getItem("levelup_active_profile");
     if (!profileId) return;
 
     allRoomsRef.current = { ...allRoomsRef.current, [String(roomId)]: placedItems };
+    const snapshot = allRoomsRef.current;
 
-    supabase
-      .from("rooms")
-      .update({
-        room_items: allRoomsRef.current,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("profile_id", profileId)
-      .then(({ error }) => {
-        if (error) console.error("Failed to save room:", error.message);
-      });
+    if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+    pendingSaveRef.current = () => {
+      pendingSaveRef.current = null;
+      supabase
+        .from("rooms")
+        .update({
+          room_items: snapshot,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("profile_id", profileId)
+        .then(({ error }) => {
+          if (error) console.error("Failed to save room:", error.message);
+        });
+    };
+    saveTimerRef.current = setTimeout(() => pendingSaveRef.current?.(), 400);
   }, [placedItems, roomId, loaded]);
+
+  // Leaving the page mid-wait still saves the last move.
+  useEffect(() => () => {
+    if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+    pendingSaveRef.current?.();
+  }, []);
 
   const eventToFraction = (clientX: number, clientY: number) => {
     const el = stageRef.current;
@@ -255,7 +276,13 @@ function RoomContent() {
         </button>
 
         <div style={{ background: "rgba(255,255,255,0.95)", borderRadius: 28, padding: "32px 28px", maxWidth: 340, width: "88%", textAlign: "center", boxShadow: "0 14px 40px rgba(0,0,0,0.2)" }}>
-          <div style={{ fontSize: 56, marginBottom: 8 }}>🔒</div>
+          <div style={{ marginBottom: 8, display: "flex", justifyContent: "center" }}>
+            <svg width="56" height="56" viewBox="0 0 24 24">
+              <path d="M7 11V8a5 5 0 0 1 10 0v3" fill="none" stroke="#9898B8" strokeWidth="2.6" strokeLinecap="round"/>
+              <rect x="4" y="10" width="16" height="12" rx="3" fill="#F5C842" stroke="#C49A1A" strokeWidth="1.2"/>
+              <circle cx="12" cy="15.5" r="1.8" fill="#C47A10"/>
+            </svg>
+          </div>
           <div style={{ fontFamily: "var(--font-game)", fontSize: 24, color: "#1A1A2E", marginBottom: 8 }}>
             {room.name} is locked
           </div>
@@ -263,7 +290,10 @@ function RoomContent() {
             Keep playing every day to unlock this room!
           </div>
           <div style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "#FFF1E8", borderRadius: 99, padding: "8px 18px", marginTop: 6, marginBottom: 22 }}>
-            <span style={{ fontSize: 18 }}>🔥</span>
+            <svg width="16" height="19" viewBox="0 0 36 42">
+              <path d="M18 2 C18 2 28 12 28 22 C28 32 22 38 18 40 C14 38 8 32 8 22 C8 12 18 2 18 2 Z" fill="#FF6B35" stroke="#C03010" strokeWidth="1.5"/>
+              <path d="M18 18 C18 18 22 23 22 27 C22 31 20 34 18 35 C16 34 14 31 14 27 C14 23 18 18 18 18 Z" fill="#FFE066"/>
+            </svg>
             <span style={{ fontFamily: "var(--font-game)", fontSize: 16, color: "#FF6B35" }}>
               unlocks at {requiredStreak} day streak
             </span>
@@ -520,11 +550,11 @@ function Cloud({ cx, cy, s }: { cx: number; cy: number; s: number }) {
 
 const SPRITE_SIZE: Record<string, { w: number; h: number }> = {
   bed:        { w: 200, h: 130 },
-  desk:       { w: 110, h: 120 },
-  plant:      { w: 70,  h: 120 },
+  desk:       { w: 110, h: 110 },
+  plant:      { w: 70,  h: 105 },
   sofa:       { w: 180, h: 110 },
   bookshelf:  { w: 100, h: 150 },
-  floorlamp:  { w: 64,  h: 160 },
+  floorlamp:  { w: 64,  h: 146 },
   rug:        { w: 200, h: 76  },
   armchair:   { w: 100, h: 110 },
   coffeetable:{ w: 120, h: 78  },
@@ -535,7 +565,7 @@ const SPRITE_SIZE: Record<string, { w: number; h: number }> = {
   nightstand: { w: 70,  h: 90  },
   fireplace:  { w: 120, h: 140 },
   floorplant: { w: 90,  h: 135 },
-  door:       { w: 80,  h: 50 },
+  door:       { w: 80,  h: 167 },
   window:     { w: 150, h: 150 },
   painting:   { w: 110, h: 95  },
   poster:     { w: 80,  h: 110 },
@@ -544,7 +574,7 @@ const SPRITE_SIZE: Record<string, { w: number; h: number }> = {
   trophy:     { w: 90,  h: 100 },
   galaxy:     { w: 100, h: 100 },
   wand:       { w: 150, h: 150 },
-  sortinghat: { w: 80, h: 145 },
+  sortinghat: { w: 80,  h: 89  },
   wizardmap:  { w: 90,  h: 100 },
   fishbowl:   { w: 90,  h: 100 },
   gardenbed:  { w: 120, h: 100 },
@@ -558,7 +588,7 @@ const SPRITE_SIZE: Record<string, { w: number; h: number }> = {
   trampoline: { w: 120, h: 80  },
   hammock:    { w: 130, h: 90  },
   snitch:     { w: 90,  h: 70  },
-  gamingconsole: { w: 50, h: 90 },
+  gamingconsole: { w: 50, h: 41 },
   wallshelf:  { w: 120, h: 80  },
 };
 

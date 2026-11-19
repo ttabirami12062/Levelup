@@ -13,6 +13,7 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [notice, setNotice] = useState('');
 
   async function handleGoogle() {
     setError('');
@@ -32,6 +33,7 @@ export default function LoginPage() {
 
   async function handleSubmit() {
     setError('');
+    setNotice('');
 
     // simple checks before we even call Supabase
     if (!email.includes('@')) {
@@ -47,9 +49,16 @@ export default function LoginPage() {
 
     if (mode === 'signup') {
       // create a brand-new parent account
-      const { error } = await supabase.auth.signUp({ email, password });
+      const { data, error } = await supabase.auth.signUp({ email, password });
       if (error) {
         setError(error.message);
+        setLoading(false);
+        return;
+      }
+      // Supabase holds back the session until the email link is clicked.
+      if (!data.session) {
+        setMode('signin');
+        setNotice('Check your email and tap the link to confirm, then sign in here.');
         setLoading(false);
         return;
       }
@@ -196,6 +205,12 @@ export default function LoginPage() {
           placeholder="At least 6 characters"
           style={inputStyle}
         />
+
+        {notice && (
+          <p style={{ color: '#3D9E2A', fontSize: 13, fontWeight: 700, margin: '14px 0 0', textAlign: 'center' }}>
+            {notice}
+          </p>
+        )}
 
         {error && (
           <p style={{ color: '#E85454', fontSize: 13, fontWeight: 700, margin: '14px 0 0', textAlign: 'center' }}>

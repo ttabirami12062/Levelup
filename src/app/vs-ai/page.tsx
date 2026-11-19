@@ -2,49 +2,22 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { DIFFICULTIES } from "@/lib/vsAi";
 
-const DIFFICULTIES = [
-  {
-    id: "easy",
-    label: "Easy",
-    description: "Zeta is slow and clumsy",
-    color: "#5DBE4A",
-    shadow: "#3D9E2A",
-    bg: "#EAF7E6",
-    reward: 1,
-    zetaSpeed: 8000, // ms between Zeta correct answers
-  },
-  {
-    id: "medium",
-    label: "Medium",
-    description: "Zeta fights back hard",
-    color: "#7B6FE8",
-    shadow: "#3A30A8",
-    bg: "#7B6FE8",
-    reward: 3,
-    zetaSpeed: 4500,
-  },
-  {
-    id: "hard",
-    label: "Hard",
-    description: "Zeta is unstoppable",
-    color: "#E85454",
-    shadow: "#A02020",
-    bg: "#1A1A2E",
-    reward: 5,
-    zetaSpeed: 2600,
-  },
-];
+const COLORS: Record<string, { color: string; shadow: string }> = {
+  easy:   { color: "#5DBE4A", shadow: "#3D9E2A" },
+  medium: { color: "#7B6FE8", shadow: "#3A30A8" },
+  hard:   { color: "#E85454", shadow: "#A02020" },
+};
 
 export default function VsAiDifficulty() {
   const router  = useRouter();
   const [selected, setSelected] = useState<string | null>(null);
 
-  const handleStart = (id: string, zetaSpeed: number, reward: number) => {
+  const handleStart = (id: string) => {
     setSelected(id);
-    // Pass difficulty data through URL params
     setTimeout(() => {
-      router.push(`/vs-ai/battle?difficulty=${id}&zetaSpeed=${zetaSpeed}&reward=${reward}`);
+      router.push(`/vs-ai/battle?difficulty=${id}`);
     }, 200);
   };
 
@@ -93,10 +66,10 @@ export default function VsAiDifficulty() {
 
         {/* Difficulty options */}
         <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 20 }}>
-          {DIFFICULTIES.map(d => (
+          {DIFFICULTIES.map(diff => ({ ...diff, ...COLORS[diff.id] })).map(d => (
             <button
               key={d.id}
-              onClick={() => handleStart(d.id, d.zetaSpeed, d.reward)}
+              onClick={() => handleStart(d.id)}
               style={{
                 background: selected === d.id ? d.color : d.id === "medium" ? "#7B6FE8" : d.id === "hard" ? "#1A1A2E" : "#EAF7E6",
                 border: `2.5px solid ${d.shadow}`,

@@ -3,6 +3,7 @@
 import { useSyncExternalStore, useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useGame } from "@/lib/gameContext";
+import { getAvatarById } from "@/components/avatar/Avatars";
 
 interface Stone {
   id: number;
@@ -67,7 +68,9 @@ function generateDecoys(answer: number, count: number): number[] {
 
 const LANE_COUNT     = 4;
 const STONE_SIZE     = 64;
+// Pixels per frame at 60fps. Scaled by frame time so 120Hz screens aren't twice as fast.
 const STONE_SPEED    = 1.0;
+const FRAME_MS       = 1000 / 60;
 const SPAWN_INTERVAL = 2800;
 const AVATAR_BOTTOM  = 150;
 
@@ -105,6 +108,8 @@ function SoloGameScreen() {
   const [gemFlash, setGemFlash]         = useState(false);
   const [rewardFlash, setRewardFlash]   = useState<string | null>(null);
   const [gemCelebration, setGemCelebration] = useState(false);
+  // Solo only renders in the browser (see SoloGame below), so localStorage is safe here.
+  const [avatarId] = useState(() => Number(localStorage.getItem("levelup_avatar")) || 1);
 
   const stonesRef       = useRef<Stone[]>([]);
   const equationRef     = useRef<Equation>(equation);
@@ -323,7 +328,7 @@ function SoloGameScreen() {
     setStones(prev => {
       const updated = prev.map(stone => {
         if (stone.collected) return stone;
-        const newY = stone.y + STONE_SPEED;
+        const newY = stone.y + STONE_SPEED * delta / FRAME_MS;
         const stoneCenterY  = newY + STONE_SIZE / 2;
         const avatarCenterY = (avatarTop + avatarBot) / 2;
         const vertHit  = Math.abs(stoneCenterY - avatarCenterY) < 30;
@@ -593,7 +598,7 @@ function SoloGameScreen() {
             zIndex: 10,
           }}
         >
-          <AvatarSVG />
+          <PlayerAvatar id={avatarId} />
         </div>
 
         {/* Gem celebration overlay — fades in and out */}
@@ -747,27 +752,10 @@ function GemSVG({ size = 24 }: { size?: number }) {
   );
 }
 
-function AvatarSVG() {
-  return (
-    <svg viewBox="0 0 64 80" xmlns="http://www.w3.org/2000/svg" width="64" height="80">
-      <ellipse cx="32" cy="16" rx="16" ry="9" fill="#5C3317" stroke="#3B1F0A" strokeWidth="1.5"/>
-      <ellipse cx="32" cy="24" rx="15" ry="16" fill="#C68642" stroke="#9A6020" strokeWidth="1.5"/>
-      <ellipse cx="25" cy="22" rx="4.5" ry="5" fill="white" stroke="#2A1A00" strokeWidth="1"/>
-      <ellipse cx="39" cy="22" rx="4.5" ry="5" fill="white" stroke="#2A1A00" strokeWidth="1"/>
-      <ellipse cx="25.5" cy="22.5" rx="2.8" ry="3.2" fill="#1A0A00"/>
-      <ellipse cx="39.5" cy="22.5" rx="2.8" ry="3.2" fill="#1A0A00"/>
-      <ellipse cx="26.5" cy="21" rx="1.1" ry="1.4" fill="white"/>
-      <ellipse cx="40.5" cy="21" rx="1.1" ry="1.4" fill="white"/>
-      <path d="M25 31 Q32 37 39 31" stroke="#9A6020" strokeWidth="1.8" fill="none" strokeLinecap="round"/>
-      <rect x="16" y="40" width="32" height="28" rx="10" fill="#FF6B9D" stroke="#CC4477" strokeWidth="1.5"/>
-      <rect x="6" y="41" width="12" height="22" rx="6" fill="#FF6B9D" stroke="#CC4477" strokeWidth="1.5"/>
-      <rect x="46" y="41" width="12" height="22" rx="6" fill="#FF6B9D" stroke="#CC4477" strokeWidth="1.5"/>
-      <ellipse cx="12" cy="64" rx="7" ry="6" fill="#C68642" stroke="#9A6020" strokeWidth="1"/>
-      <ellipse cx="52" cy="64" rx="7" ry="6" fill="#C68642" stroke="#9A6020" strokeWidth="1"/>
-      <rect x="19" y="67" width="11" height="12" rx="4" fill="#4A90D9" stroke="#2A6AB0" strokeWidth="1.5"/>
-      <rect x="34" y="67" width="11" height="12" rx="4" fill="#4A90D9" stroke="#2A6AB0" strokeWidth="1.5"/>
-    </svg>
-  );
+// The kid's own character, sized to the 64px lane.
+function PlayerAvatar({ id }: { id: number }) {
+  const Character = getAvatarById(id).component;
+  return <div style={{ width: 64, height: 96 }}><Character /></div>;
 }
 
 function Cloud({ size }: { size: "sm" | "md" | "lg" }) {

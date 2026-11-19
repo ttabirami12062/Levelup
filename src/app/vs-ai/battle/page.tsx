@@ -4,6 +4,8 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useGame } from "@/lib/gameContext";
 import { Suspense } from "react";
+import { getDifficulty, rollZetaTime } from "@/lib/vsAi";
+import { getAvatarById } from "@/components/avatar/Avatars";
 
 interface Stone {
   id: number;
@@ -34,7 +36,7 @@ function generateEquation(level: number): Equation {
     return { question: `${a} − ${b} = ?`, answer: a - b };
   }
   const a = rand(2, 12);
-  const b = rand(2, 15);
+  const b = rand(2, 12);
   return { question: `${a} × ${b} = ?`, answer: a * b };
 }
 
@@ -53,7 +55,8 @@ function generateDecoys(answer: number, count: number): number[] {
 
 const LANE_COUNT    = 4;
 const STONE_SIZE    = 64;
-const STONE_SPEED   = 1.0;
+// Stones start just above the top edge.
+const SPAWN_Y       = -STONE_SIZE - 20;
 const WIN_SCORE     = 5;
 const AVATAR_BOTTOM = 150;
 
@@ -69,13 +72,14 @@ function BattleScreen() {
   const searchParams = useSearchParams();
   const { addCoins, addGems, updateStreak } = useGame();
 
-  const difficulty = searchParams.get("difficulty") || "medium";
-  const zetaSpeed  = Number(searchParams.get("zetaSpeed")) || 5000;
-  const reward     = Number(searchParams.get("reward")) || 3;
+  const diff       = getDifficulty(searchParams.get("difficulty"));
+  const difficulty = diff.id;
+  const reward     = diff.reward;
+  const fallMs     = diff.fallSeconds * 1000;
 
   // Each difficulty starts at a harder question tier so the math actually
   // scales: easy = addition, medium = subtraction, hard = multiplication.
-  const START_LEVEL = difficulty === "hard" ? 7 : difficulty === "medium" ? 4 : 1;
+  const START_LEVEL = diff.startLevel;
 
   const [equation, setEquation]         = useState<Equation>({ question: "Get ready!", answer: 0 });
   const [stones, setStones]             = useState<Stone[]>([]);
@@ -91,7 +95,8 @@ function BattleScreen() {
   const [zetaReaction, setZetaReaction] = useState<"normal" | "winning" | "losing" | "correct">("normal");
   const [rewardPops, setRewardPops]     = useState<{ id: number; text: string; x: number; isZeta: boolean }[]>([]);
   const [winner, setWinner]             = useState<"player" | "zeta" | null>(null);
-  const [level, setLevel]               = useState(START_LEVEL);
+  const [, setLevel]                    = useState(START_LEVEL);
+  const [avatarId, setAvatarId]         = useState(1);
 
   const stonesRef      = useRef<Stone[]>([]);
   const equationRef    = useRef<Equation>(equation);
@@ -103,7 +108,6 @@ function BattleScreen() {
   const timerRef       = useRef(100);
   const playerScoreRef = useRef(0);
   const zetaScoreRef   = useRef(0);
-  const zetaTimerRef   = useRef<ReturnType<typeof setTimeout> | null>(null);
   const levelRef       = useRef(START_LEVEL);
   const worldHRef      = useRef(0);
   // Tracks stones already handled so the same stone can't be counted twice.
@@ -111,15 +115,20 @@ function BattleScreen() {
   // Locks the current wave the instant someone scores, so the loser of that
   // wave (player OR Zeta) can't also score on the same equation.
   const waveDecidedRef = useRef(false);
-  // Increments every time a new equation/wave begins. Zeta captures the wave
-  // id it was armed for and refuses to score into a stale wave — this stops
-  // an old Zeta timer from "arriving late" and stealing a point the kid won.
-  const currentWaveRef = useRef(0);
+  // Zeta runs on the game loop's clock rather than setTimeout, so pausing the
+  // loop (hint screen) pauses Zeta too. zetaDueRef is null when Zeta will miss.
+  const waveElapsedRef = useRef(0);
+  const zetaDueRef     = useRef<number | null>(null);
+  const zetaMovedRef   = useRef(false);
 
   useEffect(() => { equationRef.current   = equation;  }, [equation]);
   useEffect(() => { avatarLaneRef.current = avatarLane; }, [avatarLane]);
   useEffect(() => { gamePhaseRef.current  = gamePhase; }, [gamePhase]);
   useEffect(() => { stonesRef.current     = stones;    }, [stones]);
+  useEffect(() => {
+    const saved = Number(localStorage.getItem("levelup_avatar"));
+    if (saved) setAvatarId(saved);
+  }, []);
 
   useEffect(() => {
     const measure = () => {
@@ -142,17 +151,15 @@ function BattleScreen() {
       setGamePhase("finished");
       gamePhaseRef.current = "finished";
       if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
-      if (zetaTimerRef.current) clearTimeout(zetaTimerRef.current);
       addCoins(reward);
-      addGems(difficulty === "hard" ? 1 : 0);
+      if (diff.gems > 0) addGems(diff.gems);
     } else if (zScore >= WIN_SCORE) {
       setWinner("zeta");
       setGamePhase("finished");
       gamePhaseRef.current = "finished";
       if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
-      if (zetaTimerRef.current) clearTimeout(zetaTimerRef.current);
     }
-  }, [addCoins, addGems, reward, difficulty]);
+  }, [addCoins, addGems, reward, diff.gems]);
 
   const spawnWave = useCallback(() => {
     const eq     = equationRef.current;
@@ -163,7 +170,7 @@ function BattleScreen() {
     const newStones: Stone[] = lanes.map((lane, index) => ({
       id:        stoneIdRef.current++,
       lane,
-      y:         -STONE_SIZE - 20,
+      y:         SPAWN_Y,
       value:     lane === answerLane ? eq.answer : decoys[index < decoys.length ? index : 0],
       isAnswer:  lane === answerLane,
       collected: false,
@@ -174,18 +181,16 @@ function BattleScreen() {
     stonesRef.current = [...stonesRef.current, ...newStones];
   }, []);
 
-  // ── SCHEDULE ZETA ──
-  // Zeta visually moves to the answer stone lane and collects it
-  // Ref indirection lets advanceWave() re-arm Zeta without a definition cycle.
-  const scheduleZetaRef = useRef<() => void>(() => {});
+  const armZeta = useCallback(() => {
+    waveElapsedRef.current = 0;
+    zetaMovedRef.current   = false;
+    zetaDueRef.current     = rollZetaTime(diff, fallMs, zetaScoreRef.current, playerScoreRef.current);
+  }, [diff, fallMs]);
 
   // Single unified "start the next wave" path. Every reset (player scored,
-  // Zeta scored, or the round timer expired) goes through here so the three
-  // paths can't fight each other or leave Zeta double-armed.
+  // Zeta scored, or the round timer expired) goes through here.
   const advanceWave = useCallback(() => {
     if (gamePhaseRef.current !== "playing") return;
-    if (zetaTimerRef.current) clearTimeout(zetaTimerRef.current);
-    currentWaveRef.current++;        // invalidate any in-flight Zeta attempt
     waveDecidedRef.current = false;
     processedRef.current.clear();
     const newEq = generateEquation(levelRef.current);
@@ -195,16 +200,11 @@ function BattleScreen() {
     setTimerWidth(100);
     setStones([]);
     stonesRef.current = [];
-    scheduleZetaRef.current();        // arm exactly one Zeta attempt
-  }, []);
+    armZeta();
+  }, [armZeta]);
 
-  // Zeta commits to collecting the answer stone for a specific wave. Shared by
-  // the initial timer and the "answer not on screen yet" retry so there's no
-  // duplicated scoring logic.
-  const zetaCollect = useCallback((armedWave: number, answerStone: Stone) => {
-    if (gamePhaseRef.current !== "playing") return;
-    if (armedWave !== currentWaveRef.current) return; // player advanced wave
-    if (waveDecidedRef.current) return;               // player already won
+  const zetaCollect = useCallback((answerStone: Stone) => {
+    if (gamePhaseRef.current !== "playing" || waveDecidedRef.current) return;
     waveDecidedRef.current = true;
 
     zetaScoreRef.current++;
@@ -225,9 +225,7 @@ function BattleScreen() {
     stonesRef.current.forEach(s => processedRef.current.add(s.id));
 
     setTimeout(() => {
-      const zScore = zetaScoreRef.current;
-      const pScore = playerScoreRef.current;
-      setZetaReaction(zScore > pScore ? "winning" : "losing");
+      setZetaReaction(zetaScoreRef.current > playerScoreRef.current ? "winning" : "losing");
     }, 500);
 
     const popId = Date.now();
@@ -240,38 +238,33 @@ function BattleScreen() {
     setTimeout(() => advanceWave(), 450);
   }, [checkWin, getLaneX, advanceWave]);
 
-  // Looks for the answer stone for this wave; once Zeta's "thinking" delay is
-  // up it commits via zetaCollect. If the stone hasn't dropped in yet it retries
-  // shortly WITHIN the same wave (this is the fix for easy Zeta never moving —
-  // it no longer waits another full zetaSpeed when it misses the window).
-  const zetaTryCollect = useCallback((armedWave: number) => {
-    if (gamePhaseRef.current !== "playing") return;
-    if (armedWave !== currentWaveRef.current) return;
-    if (waveDecidedRef.current) return;
-
+  // Called every frame. Zeta slides to the answer lane half a second before
+  // grabbing it; on a miss it slides to a wrong lane and gives up the wave.
+  const stepZeta = useCallback((delta: number) => {
+    if (waveDecidedRef.current || (zetaMovedRef.current && zetaDueRef.current === null)) return;
     const answerStone = stonesRef.current.find(s => s.isAnswer && !s.collected);
-    if (!answerStone) {
-      zetaTimerRef.current = setTimeout(() => zetaTryCollect(armedWave), 300);
+    if (!answerStone) return;
+    waveElapsedRef.current += delta;
+    const t = waveElapsedRef.current;
+    const due = zetaDueRef.current;
+
+    if (due === null) {
+      if (t < fallMs * 0.7) return;
+      const wrong = stonesRef.current.find(s => !s.isAnswer && !s.collected);
+      if (wrong) setZetaLane(wrong.lane);
+      zetaMovedRef.current = true;
+      setZetaReaction("losing");
+      const popId = Date.now();
+      setRewardPops(prev => [...prev, { id: popId, text: "Zeta missed!", x: getLaneX(wrong?.lane ?? 0), isZeta: true }]);
+      setTimeout(() => setRewardPops(prev => prev.filter(p => p.id !== popId)), 900);
       return;
     }
-    // Move Zeta visually to the answer lane, then commit after a beat.
-    setZetaLane(answerStone.lane);
-    setTimeout(() => zetaCollect(armedWave, answerStone), 500);
-  }, [zetaCollect]);
-
-  // Arms exactly one Zeta attempt for the current wave after the difficulty
-  // delay. The captured wave id makes any late/stale firing a no-op.
-  const scheduleZeta = useCallback(() => {
-    if (gamePhaseRef.current !== "playing") return;
-    const armedWave = currentWaveRef.current;
-    zetaTimerRef.current = setTimeout(() => {
-      zetaTryCollect(armedWave);
-    }, zetaSpeed + (Math.random() * 800 - 400));
-  }, [zetaSpeed, zetaTryCollect]);
-
-  // Keep the ref pointing at the latest scheduleZeta so advanceWave can call it.
-  useEffect(() => { scheduleZetaRef.current = scheduleZeta; }, [scheduleZeta]);
-
+    if (!zetaMovedRef.current && t >= due - 500) {
+      setZetaLane(answerStone.lane);
+      zetaMovedRef.current = true;
+    }
+    if (t >= due) zetaCollect(answerStone);
+  }, [fallMs, getLaneX, zetaCollect]);
 
   const handleCollect = useCallback((stone: Stone) => {
     // Guard: never process the same stone twice (fixes double-count).
@@ -294,10 +287,7 @@ function BattleScreen() {
 
     playerScoreRef.current++;
     setPlayerScore(playerScoreRef.current);
-    // Lock this wave immediately so Zeta's in-flight timer can't also score
-    // on the same equation (this is the "Zeta arrives late and steals it" fix).
     waveDecidedRef.current = true;
-    if (zetaTimerRef.current) clearTimeout(zetaTimerRef.current);
     setZetaReaction(playerScoreRef.current > zetaScoreRef.current ? "losing" : "winning");
 
     const popId = Date.now();
@@ -329,8 +319,6 @@ function BattleScreen() {
     }
 
     checkWin(playerScoreRef.current, zetaScoreRef.current);
-
-    // Unified next-wave path (also re-arms Zeta cleanly).
     setTimeout(() => advanceWave(), 450);
   }, [getLaneX, checkWin, advanceWave]);
 
@@ -343,13 +331,13 @@ function BattleScreen() {
     const worldH    = worldHRef.current || window.innerHeight * 0.6;
     const avatarTop = worldH - AVATAR_BOTTOM - 70;
     const avatarBot = worldH - AVATAR_BOTTOM;
+    const avatarCenterY = (avatarTop + avatarBot) / 2;
+    // Speed is set so a stone reaches the kid in exactly fallSeconds on any
+    // screen size or refresh rate, which keeps the race against Zeta fair.
+    const hitY = avatarCenterY - STONE_SIZE / 2;
+    const step = (hitY - SPAWN_Y) / fallMs * delta;
 
     const activeStones = stonesRef.current.filter(s => !s.collected && s.y < worldH);
-    // First wave of the round: no stones have ever spawned yet. Drop them in
-    // without advancing (advanceWave would bump the wave id before Zeta's first
-    // timer, invalidating it). Subsequent empties are handled by the round
-    // timer below via advanceWave, so we only spawn here when truly empty AND
-    // the current wave hasn't been decided yet.
     if (activeStones.length === 0 && !waveDecidedRef.current && stonesRef.current.length === 0) {
       spawnWave();
     }
@@ -357,19 +345,15 @@ function BattleScreen() {
     setStones(prev => {
       const updated = prev.map(stone => {
         if (stone.collected) return stone;
-        const newY = stone.y + STONE_SPEED;
-        const stoneCenterY  = newY + STONE_SIZE / 2;
-        const avatarCenterY = (avatarTop + avatarBot) / 2;
+        const newY = stone.y + step;
+        const stoneCenterY = newY + STONE_SIZE / 2;
         const vertHit  = Math.abs(stoneCenterY - avatarCenterY) < 30;
         const horizHit = stone.lane === avatarLaneRef.current;
         if (vertHit && horizHit && !stone.collected && !processedRef.current.has(stone.id)) {
-          // If the avatar touches the CORRECT stone, claim the wave for the
-          // player synchronously — right here in the frame — so Zeta's pending
-          // timer can't resolve first on a later macrotask. This is the real
-          // fix for "I moved in time but Zeta still scored".
+          // Claim the wave for the player right here in the frame so Zeta
+          // can't also score on it before handleCollect runs.
           if (stone.value === equationRef.current.answer && !waveDecidedRef.current) {
             waveDecidedRef.current = true;
-            if (zetaTimerRef.current) clearTimeout(zetaTimerRef.current);
           }
           setTimeout(() => handleCollect({ ...stone, y: newY }), 0);
           return { ...stone, y: newY, collected: true };
@@ -380,13 +364,13 @@ function BattleScreen() {
       return updated;
     });
 
+    stepZeta(delta);
+
     timerRef.current = Math.max(0, timerRef.current - (delta / 200));
     setTimerWidth(timerRef.current);
 
     // Wave ends either when the round timer runs out OR when every stone has
-    // fallen off-screen unanswered. Both go through advanceWave so a fresh
-    // equation drops and Zeta re-arms exactly once. Lock first so this can't
-    // double-fire across frames.
+    // fallen off-screen unanswered. Lock first so this can't double-fire.
     const allGone = stonesRef.current.length > 0 &&
                     stonesRef.current.every(s => s.collected || s.y >= worldH);
     if (!waveDecidedRef.current && (timerRef.current <= 0 || allGone)) {
@@ -395,7 +379,7 @@ function BattleScreen() {
     }
 
     animFrameRef.current = requestAnimationFrame(gameLoop);
-  }, [spawnWave, handleCollect, advanceWave]);
+  }, [spawnWave, handleCollect, advanceWave, stepZeta, fallMs]);
 
   useEffect(() => {
     if (gamePhase !== "countdown") return;
@@ -406,22 +390,19 @@ function BattleScreen() {
       setGamePhase("playing");
       gamePhaseRef.current = "playing";
       waveDecidedRef.current = false;
-      currentWaveRef.current = 0;
+      armZeta();
       lastTimeRef.current = performance.now();
       animFrameRef.current = requestAnimationFrame(gameLoop);
-      scheduleZeta();
-      // Update streak when kid starts playing
       updateStreak();
       return;
     }
     const t = setTimeout(() => setCountdown(c => c - 1), 1000);
     return () => clearTimeout(t);
-  }, [countdown, gamePhase, gameLoop, scheduleZeta]);
+  }, [countdown, gamePhase, gameLoop, armZeta, updateStreak, START_LEVEL]);
 
   useEffect(() => {
     return () => {
       if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
-      if (zetaTimerRef.current) clearTimeout(zetaTimerRef.current);
     };
   }, []);
 
@@ -585,7 +566,7 @@ function BattleScreen() {
             zIndex: 10,
           }}
         >
-          <AvatarSVG />
+          <PlayerAvatar id={avatarId} />
           <div style={{ background: "#7B6FE8", borderRadius: 6, padding: "2px 6px", textAlign: "center", marginTop: 2 }}>
             <span style={{ fontFamily: "var(--font-game)", fontSize: 9, color: "white" }}>You</span>
           </div>
@@ -661,7 +642,7 @@ function BattleScreen() {
               </div>
               <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: 20, marginBottom: 16 }}>
                 <div style={{ textAlign: "center", opacity: winner === "player" ? 1 : 0.6 }}>
-                  <AvatarSVG />
+                  <PlayerAvatar id={avatarId} />
                   <div style={{ fontFamily: "var(--font-game)", fontSize: 14, color: "#7B6FE8", marginTop: 4 }}>You {playerScore}</div>
                 </div>
                 <div style={{ fontFamily: "var(--font-game)", fontSize: 16, color: "#9898B8" }}>vs</div>
@@ -678,12 +659,12 @@ function BattleScreen() {
                       <CoinSVG size={16} />
                       <span style={{ fontFamily: "var(--font-game)", fontSize: 15, color: "#C47A10" }}>+{reward} coins</span>
                     </div>
-                    {difficulty === "hard" && (
+                    {diff.gems > 0 && (
                       <>
                         <div style={{ width: 1, height: 16, background: "#E0E0E0" }} />
                         <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
                           <GemSVG size={14} />
-                          <span style={{ fontFamily: "var(--font-game)", fontSize: 15, color: "#7B6FE8" }}>+1 gem</span>
+                          <span style={{ fontFamily: "var(--font-game)", fontSize: 15, color: "#7B6FE8" }}>+{diff.gems} gem</span>
                         </div>
                       </>
                     )}
@@ -698,7 +679,7 @@ function BattleScreen() {
               <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                 <button
                   onClick={() => {
-                    window.location.href = `/vs-ai/battle?difficulty=${difficulty}&zetaSpeed=${zetaSpeed}&reward=${reward}`;
+                    window.location.href = `/vs-ai/battle?difficulty=${difficulty}`;
                   }}
                   style={{ background: "linear-gradient(to bottom, #FFD700, #F5A623)", border: "none", borderRadius: 99, padding: "12px", fontFamily: "var(--font-game)", fontSize: 15, color: "white", cursor: "pointer", boxShadow: "0 4px 0 #C47A10" }}
                 >
@@ -749,7 +730,6 @@ function BattleScreen() {
         <button
           onClick={() => {
             if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
-            if (zetaTimerRef.current) clearTimeout(zetaTimerRef.current);
             router.push("/home");
           }}
           style={{ background: "rgba(232,84,84,0.15)", border: "1.5px solid #E85454", borderRadius: 99, padding: "6px 28px", fontFamily: "var(--font-game)", fontSize: 13, color: "#E85454", cursor: "pointer" }}
@@ -768,27 +748,10 @@ function BattleScreen() {
   );
 }
 
-function AvatarSVG() {
-  return (
-    <svg viewBox="0 0 64 80" xmlns="http://www.w3.org/2000/svg" width="64" height="80">
-      <ellipse cx="32" cy="16" rx="16" ry="9" fill="#5C3317" stroke="#3B1F0A" strokeWidth="1.5"/>
-      <ellipse cx="32" cy="24" rx="15" ry="16" fill="#C68642" stroke="#9A6020" strokeWidth="1.5"/>
-      <ellipse cx="25" cy="22" rx="4.5" ry="5" fill="white" stroke="#2A1A00" strokeWidth="1"/>
-      <ellipse cx="39" cy="22" rx="4.5" ry="5" fill="white" stroke="#2A1A00" strokeWidth="1"/>
-      <ellipse cx="25.5" cy="22.5" rx="2.8" ry="3.2" fill="#1A0A00"/>
-      <ellipse cx="39.5" cy="22.5" rx="2.8" ry="3.2" fill="#1A0A00"/>
-      <ellipse cx="26.5" cy="21" rx="1.1" ry="1.4" fill="white"/>
-      <ellipse cx="40.5" cy="21" rx="1.1" ry="1.4" fill="white"/>
-      <path d="M25 31 Q32 37 39 31" stroke="#9A6020" strokeWidth="1.8" fill="none" strokeLinecap="round"/>
-      <rect x="16" y="40" width="32" height="28" rx="10" fill="#FF6B9D" stroke="#CC4477" strokeWidth="1.5"/>
-      <rect x="6" y="41" width="12" height="22" rx="6" fill="#FF6B9D" stroke="#CC4477" strokeWidth="1.5"/>
-      <rect x="46" y="41" width="12" height="22" rx="6" fill="#FF6B9D" stroke="#CC4477" strokeWidth="1.5"/>
-      <ellipse cx="12" cy="64" rx="7" ry="6" fill="#C68642" stroke="#9A6020" strokeWidth="1"/>
-      <ellipse cx="52" cy="64" rx="7" ry="6" fill="#C68642" stroke="#9A6020" strokeWidth="1"/>
-      <rect x="19" y="67" width="11" height="12" rx="4" fill="#4A90D9" stroke="#2A6AB0" strokeWidth="1.5"/>
-      <rect x="34" y="67" width="11" height="12" rx="4" fill="#4A90D9" stroke="#2A6AB0" strokeWidth="1.5"/>
-    </svg>
-  );
+// The kid's own character, sized to the 64px lane.
+function PlayerAvatar({ id }: { id: number }) {
+  const Character = getAvatarById(id).component;
+  return <div style={{ width: 64, height: 96 }}><Character /></div>;
 }
 
 function ZetaSVG({ size = 60 }: { size?: number }) {
