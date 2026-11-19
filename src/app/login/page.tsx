@@ -62,7 +62,7 @@ export default function LoginPage() {
         options: { emailRedirectTo: `${window.location.origin}/profiles` },
       });
       if (error) {
-        setError(error.message);
+        setError(friendlyAuthError(error.message));
         setLoading(false);
         return;
       }
@@ -77,7 +77,7 @@ export default function LoginPage() {
       // sign in to an existing parent account
       const { error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) {
-        setError(error.message);
+        setError(friendlyAuthError(error.message));
         setLoading(false);
         return;
       }
@@ -281,6 +281,19 @@ export default function LoginPage() {
       </div>
     </div>
   );
+}
+
+// Supabase's raw errors can be blank ("{}") or technical, so translate the common ones.
+function friendlyAuthError(message: string): string {
+  const m = (message || '').toLowerCase();
+  if (!m || m === '{}' || m.includes('sending confirmation email')) {
+    return "We couldn't send the confirmation email right now. Please try again in a few minutes.";
+  }
+  if (m.includes('email not confirmed')) return 'Please tap the link in your confirmation email first, then sign in.';
+  if (m.includes('invalid login credentials')) return "That email and password don't match. Try again?";
+  if (m.includes('already registered')) return 'This email already has an account. Tap Sign in below.';
+  if (m.includes('rate limit')) return 'Too many tries. Please wait a few minutes and try again.';
+  return message;
 }
 
 // Shown as a live checklist under the password box when creating an account.
