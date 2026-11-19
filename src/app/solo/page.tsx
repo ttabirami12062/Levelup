@@ -2,6 +2,7 @@
 
 import { useSyncExternalStore, useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import { nextFunFact, hintFor } from "@/lib/funFacts";
 import { useGame } from "@/lib/gameContext";
 import { getAvatarById } from "@/components/avatar/Avatars";
 
@@ -78,14 +79,6 @@ const AVATAR_BOTTOM  = 150;
 const REWARD_EVERY  = 3;
 const PENALTY_EVERY = 2;
 
-const HINT_FACTS = [
-  { fact: "Zero was invented in ancient India around 500 AD!", hint: "Break the problem into smaller steps." },
-  { fact: "The equals sign = was invented in 1557!", hint: "Try counting up from the smaller number." },
-  { fact: "Multiplication is just fast addition!", hint: "Think of it as groups of numbers." },
-  { fact: "Ancient Egyptians used math to build pyramids!", hint: "Work backwards from the answer choices." },
-  { fact: "The word algebra comes from Arabic!", hint: "Try each answer and see which fits." },
-  { fact: "Pi has been calculated to over 100 trillion digits!", hint: "Use your fingers to count if needed." },
-];
 
 function SoloGameScreen() {
   const router = useRouter();
@@ -107,7 +100,8 @@ function SoloGameScreen() {
   const [timerWidth, setTimerWidth]     = useState(100);
   const [rewardPops, setRewardPops]     = useState<RewardPop[]>([]);
   const [showHint, setShowHint]         = useState(false);
-  const [hintIndex, setHintIndex]       = useState(0);
+  const [hintFact, setHintFact]         = useState("");
+  const [hintTip, setHintTip]           = useState("");
   const [coinLost, setCoinLost]         = useState(false);
   const [gemFlash, setGemFlash]         = useState(false);
   const [rewardFlash, setRewardFlash]   = useState<string | null>(null);
@@ -426,7 +420,8 @@ function SoloGameScreen() {
   const handleHint = () => {
     if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
     setShowHint(true);
-    setHintIndex(Math.floor(Math.random() * HINT_FACTS.length));
+    setHintFact(nextFunFact());
+    setHintTip(hintFor(equationRef.current.question));
   };
 
   const getStoneStyle = (stone: Stone) => {
@@ -667,11 +662,11 @@ function SoloGameScreen() {
           <div style={{ position: "absolute", inset: 0, background: "rgba(26,26,46,0.92)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", zIndex: 50, padding: "24px 20px" }}>
             <div style={{ background: "rgba(123,111,232,0.2)", border: "2px solid #7B6FE8", borderRadius: 20, padding: "16px 20px", marginBottom: 16, maxWidth: 480, width: "100%", textAlign: "center" }}>
               <div style={{ fontFamily: "var(--font-game)", fontSize: 14, color: "#A89FF5", marginBottom: 8 }}>did you know?</div>
-              <div style={{ fontFamily: "var(--font-ui)", fontSize: 15, color: "white", lineHeight: 1.6 }}>{HINT_FACTS[hintIndex].fact}</div>
+              <div style={{ fontFamily: "var(--font-ui)", fontSize: 15, color: "white", lineHeight: 1.6 }}>{hintFact}</div>
             </div>
             <div style={{ background: "rgba(93,190,74,0.15)", border: "2px solid #5DBE4A", borderRadius: 20, padding: "14px 20px", marginBottom: 24, maxWidth: 480, width: "100%", textAlign: "center" }}>
               <div style={{ fontFamily: "var(--font-game)", fontSize: 14, color: "#5DBE4A", marginBottom: 6 }}>hint for {equation.question}</div>
-              <div style={{ fontFamily: "var(--font-ui)", fontSize: 15, color: "white", lineHeight: 1.6 }}>{HINT_FACTS[hintIndex].hint}</div>
+              <div style={{ fontFamily: "var(--font-ui)", fontSize: 15, color: "white", lineHeight: 1.6 }}>{hintTip}</div>
             </div>
             <button
               onClick={() => {

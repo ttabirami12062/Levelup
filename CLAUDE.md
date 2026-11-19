@@ -18,6 +18,9 @@ Landing (`/`) → `/login` (Google or email, parent only) → `/profiles` (kid p
 - Items: only the plant is free (`STARTER_ITEMS`). The window is a room fixture (`ROOM_FIXTURES`), not sold. Everything else, including the door (60c), is bought.
 - Solo coin display: starting total stays fixed during play, with separate +earned and -lost trackers. "end game" opens `CoinSummary` (start + earned - lost = new total, counts up, coin shakes). `addCoins`/`addGems` return the change actually applied, so lost coins at 0 aren't counted.
 
+## Fun facts and hints
+`src/lib/funFacts.ts` holds 500+ "Did you know?" facts (code file, not the database: same for every kid, works offline). `nextFunFact()` shuffles per kid in localStorage with no repeats until all are seen. `hintFor(question)` picks a tip for add, subtract or times tables, with tricks for x2, x4, x5, x9, x10, x11. Only add facts that are definitely true.
+
 ## Adding a shop item
 Add it to `ALL_ITEMS` in `src/app/room/page.tsx`, draw its sprite in `FlatSprite` and give it a box in `SPRITE_SIZE` (height must match the drawing's shape). The shop has its own small drawings in `ItemSVGMini` in `src/app/room/shop/page.tsx`, so draw it there too or it shows a "?".
 

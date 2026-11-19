@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback, useSyncExternalStore } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { nextFunFact, hintFor } from "@/lib/funFacts";
 import { useGame } from "@/lib/gameContext";
 import { Suspense } from "react";
 import { getDifficulty, rollZetaTime } from "@/lib/vsAi";
@@ -60,12 +61,6 @@ const SPAWN_Y       = -STONE_SIZE - 20;
 const WIN_SCORE     = 5;
 const AVATAR_BOTTOM = 150;
 
-const HINT_FACTS = [
-  { fact: "Zero was invented in ancient India around 500 AD!", hint: "Break the problem into smaller steps." },
-  { fact: "The equals sign = was invented in 1557!", hint: "Try counting up from the smaller number." },
-  { fact: "Multiplication is just fast addition!", hint: "Think of it as groups of numbers." },
-  { fact: "Ancient Egyptians used math to build pyramids!", hint: "Work backwards from the answer choices." },
-];
 
 function BattleScreen() {
   const router       = useRouter();
@@ -91,7 +86,8 @@ function BattleScreen() {
   const [countdown, setCountdown]       = useState(3);
   const [timerWidth, setTimerWidth]     = useState(100);
   const [showHint, setShowHint]         = useState(false);
-  const [hintIndex, setHintIndex]       = useState(0);
+  const [hintFact, setHintFact]         = useState("");
+  const [hintTip, setHintTip]           = useState("");
   const [zetaReaction, setZetaReaction] = useState<"normal" | "winning" | "losing" | "correct">("normal");
   const [rewardPops, setRewardPops]     = useState<{ id: number; text: string; x: number; isZeta: boolean }[]>([]);
   const [winner, setWinner]             = useState<"player" | "zeta" | null>(null);
@@ -429,7 +425,8 @@ function BattleScreen() {
   const handleHint = () => {
     if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
     setShowHint(true);
-    setHintIndex(Math.floor(Math.random() * HINT_FACTS.length));
+    setHintFact(nextFunFact());
+    setHintTip(hintFor(equationRef.current.question));
   };
 
   const closeHint = () => {
@@ -624,11 +621,11 @@ function BattleScreen() {
           <div style={{ position: "absolute", inset: 0, background: "rgba(26,26,46,0.92)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", zIndex: 50, padding: "24px 20px" }}>
             <div style={{ background: "rgba(123,111,232,0.2)", border: "2px solid #7B6FE8", borderRadius: 20, padding: "16px 20px", marginBottom: 16, maxWidth: 480, width: "100%", textAlign: "center" }}>
               <div style={{ fontFamily: "var(--font-game)", fontSize: 13, color: "#A89FF5", marginBottom: 8 }}>did you know?</div>
-              <div style={{ fontFamily: "var(--font-ui)", fontSize: 14, color: "white", lineHeight: 1.6 }}>{HINT_FACTS[hintIndex].fact}</div>
+              <div style={{ fontFamily: "var(--font-ui)", fontSize: 14, color: "white", lineHeight: 1.6 }}>{hintFact}</div>
             </div>
             <div style={{ background: "rgba(93,190,74,0.15)", border: "2px solid #5DBE4A", borderRadius: 20, padding: "14px 20px", marginBottom: 24, maxWidth: 480, width: "100%", textAlign: "center" }}>
               <div style={{ fontFamily: "var(--font-game)", fontSize: 13, color: "#5DBE4A", marginBottom: 6 }}>hint for {equation.question}</div>
-              <div style={{ fontFamily: "var(--font-ui)", fontSize: 14, color: "white", lineHeight: 1.6 }}>{HINT_FACTS[hintIndex].hint}</div>
+              <div style={{ fontFamily: "var(--font-ui)", fontSize: 14, color: "white", lineHeight: 1.6 }}>{hintTip}</div>
             </div>
             <button onClick={closeHint} style={{ background: "linear-gradient(to bottom, #FFD700, #F5A623)", border: "none", borderRadius: 99, padding: "12px 36px", fontFamily: "var(--font-game)", fontSize: 15, color: "white", cursor: "pointer", boxShadow: "0 4px 0 #C47A10" }}>
               got it — back to battle!
