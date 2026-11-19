@@ -40,6 +40,12 @@ export default function LoginPage() {
       setError('Please enter a valid email.');
       return;
     }
+    // New accounts must meet every rule; sign-in only checks length so older
+    // passwords made before these rules still work.
+    if (mode === 'signup' && !PASSWORD_RULES.every((r) => r.test(password))) {
+      setError('Your password needs to tick every box below.');
+      return;
+    }
     if (password.length < 6) {
       setError('Password must be at least 6 characters.');
       return;
@@ -207,9 +213,26 @@ export default function LoginPage() {
           type="password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
-          placeholder="At least 6 characters"
+          placeholder={mode === 'signup' ? 'e.g. Sunny2024' : 'Your password'}
           style={inputStyle}
         />
+
+        {mode === 'signup' && (
+          <div style={{ marginTop: 10, display: 'flex', flexDirection: 'column', gap: 5 }}>
+            {PASSWORD_RULES.map((rule) => {
+              const ok = rule.test(password);
+              return (
+                <div key={rule.label} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, fontWeight: 700, color: ok ? '#3D9E2A' : '#9a9ab0', transition: 'color 0.2s' }}>
+                  <svg width="16" height="16" viewBox="0 0 16 16">
+                    <circle cx="8" cy="8" r="7" fill={ok ? '#5DBE4A' : '#ECECF4'} />
+                    {ok && <path d="M4.5 8.2 L7 10.5 L11.5 5.5" stroke="white" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round" />}
+                  </svg>
+                  {rule.label}
+                </div>
+              );
+            })}
+          </div>
+        )}
 
         {notice && (
           <p style={{ color: '#3D9E2A', fontSize: 13, fontWeight: 700, margin: '14px 0 0', textAlign: 'center' }}>
@@ -259,6 +282,13 @@ export default function LoginPage() {
     </div>
   );
 }
+
+// Shown as a live checklist under the password box when creating an account.
+const PASSWORD_RULES = [
+  { label: 'At least 6 characters',      test: (p: string) => p.length >= 6 },
+  { label: 'Starts with a capital letter', test: (p: string) => /^[A-Z]/.test(p) },
+  { label: 'Has at least one number',    test: (p: string) => /\d/.test(p) },
+];
 
 const inputStyle: React.CSSProperties = {
   width: '100%',
