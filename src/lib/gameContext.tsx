@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import { createContext, useContext, useState, useEffect, useRef, ReactNode } from "react";
 import { supabase } from "@/lib/supabase";
 
 // ── TYPES ──
@@ -25,6 +25,19 @@ interface GameContextType {
   updateStreak: () => void;
 }
 
+// Streak days that earn a big reward and a celebration on Home.
+export const STREAK_MILESTONES: Record<number, { coins: number; gems: number; message: string }> = {
+  7:   { coins: 5,  gems: 0, message: "One whole week of playing! You are on fire!" },
+  30:  { coins: 15, gems: 1, message: "30 days! You are a Levelup legend!" },
+  100: { coins: 50, gems: 3, message: "100 DAYS! You are absolutely unstoppable!" },
+};
+// Every 10th day that isn't a milestone gives a small bonus.
+export const STREAK_BONUS_COINS = 2;
+
+// Coins and gems can never drop below zero, wherever the change comes from.
+const clamp = (n: number) => Math.max(0, Math.floor(n || 0));
+const clean = (st: GameState): GameState => ({ ...st, coins: clamp(st.coins), gems: clamp(st.gems) });
+
 // ── CONTEXT ──
 const GameContext = createContext<GameContextType | null>(null);
 
@@ -43,6 +56,9 @@ export function GameProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading]     = useState(true);
   // Which kid is playing. Read from localStorage (set by the profile picker).
   const [profileId, setProfileId] = useState<string | null>(null);
+  // Latest state for spend checks, so two quick taps can't both pass on stale coins.
+  const stateRef = useRef<GameState>(DEFAULT_STATE);
+  useEffect(() => { stateRef.current = gameState; }, [gameState]);
 
   // ── LOAD THE ACTIVE PROFILE'S PROGRESS FROM SUPABASE ──
   // Runs once on startup. Reads which kid is active, then pulls their row.
@@ -67,9 +83,10 @@ export function GameProvider({ children }: { children: ReactNode }) {
 
       if (data && !error) {
         // Row exists — load it into state.
+        // clamp also repairs any negative totals saved by older versions
         setGameState({
-          coins:      data.coins  ?? 0,
-          gems:       data.gems   ?? 0,
+          coins:      clamp(data.coins),
+          gems:       clamp(data.gems),
           streak:     data.streak ?? 0,
           lastPlayed: data.last_played ?? "",
         });
@@ -96,6 +113,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
   // for the active profile. Reads the id straight from localStorage as a
   // fallback so the save still works even if React state hasn't caught up.
   const saveToSupabase = (next: GameState) => {
+    stateRef.current = next;
     const id = profileId ?? localStorage.getItem("levelup_active_profile");
     if (!id) return;
     supabase
@@ -113,44 +131,39 @@ export function GameProvider({ children }: { children: ReactNode }) {
       });
   };
 
-  // ── ADD COINS ──
+  // ── ADD COINS / GEMS ── (negative amounts are penalties, floored at 0)
   const addCoins = (amount: number) => {
     setGameState((prev) => {
-      const next = { ...prev, coins: Math.max(0, prev.coins + amount) };
+      const next = clean({ ...prev, coins: prev.coins + amount });
       saveToSupabase(next);
       return next;
     });
   };
 
-  // ── ADD GEMS ──
   const addGems = (amount: number) => {
     setGameState((prev) => {
-      const next = { ...prev, gems: prev.gems + amount };
+      const next = clean({ ...prev, gems: prev.gems + amount });
       saveToSupabase(next);
       return next;
     });
   };
 
-  // ── SPEND COINS ──
-  // Returns true if successful, false if not enough coins.
+  // ── SPEND COINS / GEMS ──
+  // Returns false if there isn't enough. Checks stateRef (updated synchronously
+  // on every change) rather than render state, so a double tap can't overspend.
   const spendCoins = (amount: number): boolean => {
-    if (gameState.coins < amount) return false;
-    setGameState((prev) => {
-      const next = { ...prev, coins: prev.coins - amount };
-      saveToSupabase(next);
-      return next;
-    });
+    if (stateRef.current.coins < amount) return false;
+    const next = clean({ ...stateRef.current, coins: stateRef.current.coins - amount });
+    saveToSupabase(next);
+    setGameState(next);
     return true;
   };
 
-  // ── SPEND GEMS ──
   const spendGems = (amount: number): boolean => {
-    if (gameState.gems < amount) return false;
-    setGameState((prev) => {
-      const next = { ...prev, gems: prev.gems - amount };
-      saveToSupabase(next);
-      return next;
-    });
+    if (stateRef.current.gems < amount) return false;
+    const next = clean({ ...stateRef.current, gems: stateRef.current.gems - amount });
+    saveToSupabase(next);
+    setGameState(next);
     return true;
   };
 
@@ -169,14 +182,16 @@ export function GameProvider({ children }: { children: ReactNode }) {
         return prev;
       } else if (prev.lastPlayed === yesterday) {
         // Played yesterday — streak continues.
-        const newStreak  = prev.streak + 1;
-        const bonusCoins = newStreak % 10 === 0 ? 2 : 0; // every 10 days, +2 coins
-        next = {
+        const newStreak = prev.streak + 1;
+        const milestone = STREAK_MILESTONES[newStreak];
+        const bonusCoins = milestone ? milestone.coins : newStreak % 10 === 0 ? STREAK_BONUS_COINS : 0;
+        next = clean({
           ...prev,
           streak:     newStreak,
           coins:      prev.coins + bonusCoins,
+          gems:       prev.gems + (milestone?.gems ?? 0),
           lastPlayed: today,
-        };
+        });
       } else {
         // Missed a day or first time — reset streak to 1.
         next = { ...prev, streak: 1, lastPlayed: today };

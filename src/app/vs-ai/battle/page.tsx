@@ -450,9 +450,10 @@ function BattleScreen() {
       ? "linear-gradient(to right, #FFD700, #F5A623)"
       : "linear-gradient(to right, #E85454, #FF6B35)";
 
+  // Zeta is a friendly rival: always smiling, with a bigger grin when it scores.
   const zetaSmile = zetaReaction === "winning" || zetaReaction === "correct"
-    ? "M22 36 Q28 43 34 36"
-    : "M24 38 Q28 34 32 38";
+    ? "M21 35 Q30 45 39 35"
+    : "M23 35 Q30 41 37 35";
 
   return (
     <main
@@ -584,7 +585,11 @@ function BattleScreen() {
             transform: zetaReaction === "correct" ? "scale(1.2)" : "scale(1)",
           }}
         >
-          <svg width="64" height="72" viewBox="0 0 60 68">
+          <svg
+            key={zetaScore}
+            width="64" height="72" viewBox="0 0 60 68"
+            style={{ animation: zetaReaction === "correct" ? "zetaWiggle 0.6s ease, zetaTwinkle 0.6s ease" : undefined, transformOrigin: "50% 40%" }}
+          >
             <polygon points="30,4 36,22 55,22 40,34 46,52 30,42 14,52 20,34 5,22 24,22" fill="#FFD700" stroke="#C49A00" strokeWidth="2"/>
             <polygon points="22,16 26,10 30,14 34,10 38,16" fill="#FF6B35" stroke="#C03010" strokeWidth="1.5"/>
             <ellipse cx="23" cy="28" rx="4" ry="4.5" fill="white" stroke="#1A0A00" strokeWidth="1.5"/>
@@ -647,7 +652,9 @@ function BattleScreen() {
                 </div>
                 <div style={{ fontFamily: "var(--font-game)", fontSize: 16, color: "#9898B8" }}>vs</div>
                 <div style={{ textAlign: "center", opacity: winner === "zeta" ? 1 : 0.6 }}>
-                  <ZetaSVG size={60} />
+                  <div style={{ display: "inline-block", animation: winner === "zeta" ? "zetaWiggle 0.9s ease-in-out infinite, zetaTwinkle 1.2s ease-in-out infinite" : undefined }}>
+                    <ZetaSVG size={60} />
+                  </div>
                   <div style={{ fontFamily: "var(--font-game)", fontSize: 14, color: "#F5A623", marginTop: 4 }}>Zeta {zetaScore}</div>
                 </div>
               </div>
@@ -742,6 +749,18 @@ function BattleScreen() {
         @keyframes floatUp {
           0%   { opacity: 1; transform: translateY(0) scale(1); }
           100% { opacity: 0; transform: translateY(-60px) scale(1.2); }
+        }
+        @keyframes zetaWiggle {
+          0%   { transform: rotate(0deg) scale(1); }
+          20%  { transform: rotate(-14deg) scale(1.15); }
+          40%  { transform: rotate(12deg) scale(1.15); }
+          60%  { transform: rotate(-8deg) scale(1.08); }
+          80%  { transform: rotate(5deg) scale(1.04); }
+          100% { transform: rotate(0deg) scale(1); }
+        }
+        @keyframes zetaTwinkle {
+          0%, 100% { filter: drop-shadow(0 0 3px rgba(255,215,0,0.6)); }
+          50%      { filter: drop-shadow(0 0 14px rgba(255,230,102,1)); }
         }
       `}</style>
     </main>

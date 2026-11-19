@@ -78,13 +78,15 @@ export const ALL_ITEMS: ShopItem[] = [
   { id: "hammock",    name: "Hammock",      category: "garden",    price: 90,  currency: "coins", footprint: { w: 2, d: 1 } },
 ];
 
-const FREE_ITEMS = ["bed", "desk", "plant", "door", "window", "rug"];
+// Every kid starts with one plant; everything else is bought in the shop.
+// The door and window are part of each room's walls, so they aren't sold.
+export const STARTER_ITEMS = ["plant"];
+export const ROOM_FIXTURES = ["door", "window"];
+const FREE_ITEMS = [...STARTER_ITEMS, ...ROOM_FIXTURES];
 
 // Default layouts per room, used when a kid has no saved data yet.
 const DEFAULT_ROOM_ITEMS: Record<number, PlacedItem[]> = {
   1: [
-    { itemId: "rug",    x: 0.5,  y: 0.80 },
-    { itemId: "bed",    x: 0.26, y: 0.74 },
     { itemId: "window", x: 0.72, y: 0.30 },
     { itemId: "door",   x: 0.92, y: 0.55 },
     { itemId: "plant",  x: 0.10, y: 0.86 },
@@ -92,14 +94,17 @@ const DEFAULT_ROOM_ITEMS: Record<number, PlacedItem[]> = {
   2: [
     { itemId: "window", x: 0.30, y: 0.30 },
     { itemId: "door",   x: 0.90, y: 0.55 },
+    { itemId: "plant",  x: 0.12, y: 0.86 },
   ],
   3: [
     { itemId: "window", x: 0.30, y: 0.30 },
     { itemId: "door",   x: 0.90, y: 0.55 },
+    { itemId: "plant",  x: 0.12, y: 0.86 },
   ],
   4: [
     { itemId: "window", x: 0.30, y: 0.30 },
     { itemId: "door",   x: 0.90, y: 0.55 },
+    { itemId: "plant",  x: 0.12, y: 0.86 },
   ],
 };
 
@@ -162,11 +167,11 @@ function RoomContent() {
         // Existing row — pull this room's slice and the owned list.
         const allRooms = (data.room_items as Record<string, PlacedItem[]>) || {};
         allRoomsRef.current = allRooms;
-        const thisRoom = allRooms[String(roomId)] ?? DEFAULT_ROOM_ITEMS[roomId] ?? [];
+        const owned = [...new Set([...FREE_ITEMS, ...((data.owned_items as string[]) || [])])];
+        // Drops anything placed back when the bed, desk and rug were free but never bought.
+        const thisRoom = (allRooms[String(roomId)] ?? DEFAULT_ROOM_ITEMS[roomId] ?? []).filter(p => owned.includes(p.itemId));
         setPlacedItems(thisRoom);
-
-        const owned = (data.owned_items as string[]) || [];
-        setOwnedItems([...new Set([...FREE_ITEMS, ...owned])]);
+        setOwnedItems(owned);
       } else {
         // No row yet — create one seeded with default layouts for all rooms.
         const seeded: Record<string, PlacedItem[]> = {
@@ -178,7 +183,7 @@ function RoomContent() {
         allRoomsRef.current = seeded;
         await supabase.from("rooms").insert({
           profile_id:   profileId,
-          owned_items:  FREE_ITEMS,
+          owned_items:  [],
           room_items:   seeded,
           room_version: "v2",
         });

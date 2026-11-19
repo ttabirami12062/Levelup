@@ -3,7 +3,7 @@
 //
 // Zeta's answer time is a fraction of the stone's fall time (fallSeconds), so a
 // pace above 1 means the kid can beat Zeta by catching the stone. Tuned with a
-// simulation: an average kid wins about 65% on easy, 50% on medium, 30% on hard.
+// simulation: an average kid wins about 57% on easy, 42% on medium, 31% on hard.
 export interface Difficulty {
   id:          "easy" | "medium" | "hard";
   label:       string;
@@ -18,8 +18,8 @@ export interface Difficulty {
 }
 
 export const DIFFICULTIES: Difficulty[] = [
-  { id: "easy",   label: "Easy",   description: "Zeta is quick but clumsy", reward: 1, gems: 0, startLevel: 1, fallSeconds: 6, minPace: 0.8, maxPace: 1.2, missChance: 0.2 },
-  { id: "medium", label: "Medium", description: "Zeta fights back hard",    reward: 3, gems: 0, startLevel: 4, fallSeconds: 7, minPace: 0.8, maxPace: 1.2, missChance: 0.15 },
+  { id: "easy",   label: "Easy",   description: "Zeta is quick but clumsy", reward: 1, gems: 0, startLevel: 1, fallSeconds: 6, minPace: 0.78, maxPace: 1.18, missChance: 0.2 },
+  { id: "medium", label: "Medium", description: "Zeta fights back hard",    reward: 3, gems: 0, startLevel: 4, fallSeconds: 7, minPace: 0.78, maxPace: 1.18, missChance: 0.15 },
   { id: "hard",   label: "Hard",   description: "Zeta is a math whiz",      reward: 5, gems: 1, startLevel: 7, fallSeconds: 9, minPace: 0.8, maxPace: 1.2, missChance: 0.15 },
 ];
 

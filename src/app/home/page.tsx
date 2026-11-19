@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { useGame } from "@/lib/gameContext";
+import { useGame, STREAK_MILESTONES } from "@/lib/gameContext";
 import { getAvatarById } from "@/components/avatar/Avatars";
 import HowToPlay from "@/components/HowToPlay";
 
@@ -52,7 +52,7 @@ export default function Home() {
   // Check for milestone celebration
   // Show each milestone once per kid, not on every visit to Home that day.
   useEffect(() => {
-    if (loading || ![7, 30, 100].includes(streak)) return;
+    if (loading || !STREAK_MILESTONES[streak]) return;
     const key = `levelup_milestone_seen_${localStorage.getItem("levelup_active_profile")}`;
     if (localStorage.getItem(key) === String(streak)) return;
     localStorage.setItem(key, String(streak));
@@ -352,33 +352,37 @@ export default function Home() {
                 marginBottom: 16,
               }}
             >
-              {streak === 7   && "One whole week of playing! You are on fire!"}
-              {streak === 30  && "30 days! You are a Levelup legend!"}
-              {streak === 100 && "100 DAYS! You are absolutely unstoppable!"}
+              {STREAK_MILESTONES[streak]?.message}
             </div>
 
-            {/* gameContext gives +2 coins on every 10th streak day, so 30 and 100 get it but 7 doesn't */}
-            {streak % 10 === 0 ? (
-              <div
-                style={{
-                  background: "#FFF8E6",
-                  borderRadius: 14,
-                  padding: "12px 16px",
-                  marginBottom: 20,
-                  display: "flex",
-                  justifyContent: "center",
-                  alignItems: "center",
-                  gap: 8,
-                }}
-              >
+            {/* gameContext already added this reward when the streak ticked up */}
+            <div
+              style={{
+                background: "#FFF8E6",
+                borderRadius: 14,
+                padding: "12px 16px",
+                marginBottom: 20,
+                display: "flex",
+                justifyContent: "center",
+                alignItems: "center",
+                gap: 14,
+              }}
+            >
+              <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
                 <CoinIcon size={20} />
                 <span style={{ fontFamily: "var(--font-game)", fontSize: 16, color: "#C47A10" }}>
-                  +2 bonus coins earned!
+                  +{STREAK_MILESTONES[streak]?.coins ?? 0} coins
                 </span>
-              </div>
-            ) : (
-              <div style={{ height: 8 }} />
-            )}
+              </span>
+              {(STREAK_MILESTONES[streak]?.gems ?? 0) > 0 && (
+                <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                  <GemIcon size={18} />
+                  <span style={{ fontFamily: "var(--font-game)", fontSize: 16, color: "#6A4FC4" }}>
+                    +{STREAK_MILESTONES[streak].gems} {STREAK_MILESTONES[streak].gems === 1 ? "gem" : "gems"}
+                  </span>
+                </span>
+              )}
+            </div>
 
             <button
               onClick={() => setShowMilestone(false)}

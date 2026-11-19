@@ -4,9 +4,9 @@ import { useState, useEffect, Suspense, type JSX } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useGame } from "@/lib/gameContext";
 import { supabase } from "@/lib/supabase";
-import { ALL_ITEMS, ShopItem } from "../page";
+import { ALL_ITEMS, ShopItem, STARTER_ITEMS, ROOM_FIXTURES } from "../page";
 
-const FREE_ITEMS = ["bed", "desk", "plant", "door", "window", "rug"];
+const FREE_ITEMS = [...STARTER_ITEMS, ...ROOM_FIXTURES];
 type Category = "furniture" | "walls" | "floor" | "special" | "garden";
 
 function ShopContent() {
@@ -48,7 +48,7 @@ function ShopContent() {
     load();
   }, []);
 
-  const filteredItems = ALL_ITEMS.filter(i => i.category === category);
+  const filteredItems = ALL_ITEMS.filter(i => i.category === category && !ROOM_FIXTURES.includes(i.id));
 
   const handleBuy = () => {
     if (!selectedItem || !loaded) return;

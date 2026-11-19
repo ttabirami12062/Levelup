@@ -12,8 +12,10 @@ Landing (`/`) → `/login` (Google or email, parent only) → `/profiles` (kid p
 
 ## Game rules
 - Solo: 4 lanes, STONE_SPEED 1.0 (px per frame at 60fps, scaled by frame time), SPAWN_INTERVAL 2800ms. Every 3 correct: level up (max 10) and a reward. Every 2 wrong: -1 coin (never below 0).
-- VS AI: rival Zeta, first to 5. Settings live in `src/lib/vsAi.ts`; the battle URL carries only `?difficulty=`. Stones take a fixed time to fall (Easy 6s / Medium 7s / Hard 9s). Zeta answers at 0.8 to 1.2x that time, sometimes grabs a wrong stone, and eases off when 2+ ahead. Zeta runs on the game loop clock, so the hint screen pauses it. Rewards Easy 1c, Medium 3c, Hard 5c + 1 gem. Rematch uses `window.location.href`, not `router.push`.
-- Streak: same day no change, yesterday +1, otherwise reset to 1. Celebrations at 7, 30, 100.
+- VS AI: rival Zeta, first to 5. Settings live in `src/lib/vsAi.ts`; the battle URL carries only `?difficulty=`. Stones take a fixed time to fall (Easy 6s / Medium 7s / Hard 9s). Zeta answers at 0.78 to 1.18x that time on Easy and Medium (0.8 to 1.2x on Hard), sometimes grabs a wrong stone, and eases off when 2+ ahead. Zeta runs on the game loop clock, so the hint screen pauses it. Rewards Easy 1c, Medium 3c, Hard 5c + 1 gem. Rematch uses `window.location.href`, not `router.push`.
+- Streak: same day no change, yesterday +1, otherwise reset to 1. Rewards in `STREAK_MILESTONES` (gameContext): 7 days 5c, 30 days 15c + 1 gem, 100 days 50c + 3 gems; other 10th days +2c. Celebration popup on Home shows once per milestone.
+- Coins and gems never go below 0 (clamped in gameContext, including on load).
+- Items: only the plant is free (`STARTER_ITEMS`). Door and window are room fixtures (`ROOM_FIXTURES`), not sold. Everything else is bought.
 
 ## Adding a shop item
 Add it to `ALL_ITEMS` in `src/app/room/page.tsx`, draw its sprite in `FlatSprite` and give it a box in `SPRITE_SIZE` (height must match the drawing's shape). The shop has its own small drawings in `ItemSVGMini` in `src/app/room/shop/page.tsx`, so draw it there too or it shows a "?".

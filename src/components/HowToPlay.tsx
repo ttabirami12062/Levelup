@@ -78,8 +78,10 @@ export default function HowToPlay({ open, onClose }: { open: boolean; onClose: (
           <Section icon={<FlameIcon />} color="#FF6B35" title="Daily Streak">
             <P>Play at least once every day to grow your streak. Each day in a row adds 1.</P>
             <P>If you miss a day, your streak starts again at 1. You can always build it back up!</P>
-            <Row label="Every 10th day" value="2 bonus coins" />
-            <Row label="7, 30 and 100 days" value="a big celebration" />
+            <Row label="7 days" value="5 coins" />
+            <Row label="30 days" value="15 coins and 1 gem" />
+            <Row label="100 days" value="50 coins and 3 gems" />
+            <Row label="Other 10th days" value="2 bonus coins" />
           </Section>
 
           <Section icon={<HouseIcon />} color="#FF8FAB" title="Rooms">
@@ -91,7 +93,7 @@ export default function HowToPlay({ open, onClose }: { open: boolean; onClose: (
 
           <Section icon={<ShopIcon />} color="#F5A623" title="Shop">
             <P>Spend your coins and gems on fun things for your rooms, like sofas, fountains, a fish bowl and even a gaming console.</P>
-            <P>Your bed, desk, plant, door, window and rug are free.</P>
+            <P>Everyone starts with a little plant. Everything else you earn by playing, so keep collecting!</P>
             <P>Things you buy go to Your Items, and you can use them in any of your rooms. You keep them forever!</P>
           </Section>
 
