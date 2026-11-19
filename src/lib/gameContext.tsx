@@ -18,6 +18,9 @@ interface GameContextType {
   streak:    number;
   lastPlayed: string;
   loading:   boolean; // true while we fetch from Supabase — screens can wait on this
+  // "offline" = couldn't reach Supabase, "signed-out" = parent session is gone.
+  // Either way nothing is saved, so a blip can never overwrite real totals with zeros.
+  loadError: null | "offline" | "signed-out";
   addCoins:  (amount: number) => number; // returns the change actually applied (0 if already at 0)
   addGems:   (amount: number) => number;
   spendCoins:(amount: number) => boolean; // false if not enough coins
@@ -54,6 +57,9 @@ const DEFAULT_STATE: GameState = {
 export function GameProvider({ children }: { children: ReactNode }) {
   const [gameState, setGameState] = useState<GameState>(DEFAULT_STATE);
   const [loading, setLoading]     = useState(true);
+  const [loadError, setLoadError] = useState<null | "offline" | "signed-out">(null);
+  // Saves stay off until this kid's real row has loaded.
+  const canSaveRef = useRef(false);
   // Which kid is playing. Read from localStorage (set by the profile picker).
   const [profileId, setProfileId] = useState<string | null>(null);
   // The true current totals, updated synchronously on every change. All actions
@@ -78,14 +84,27 @@ export function GameProvider({ children }: { children: ReactNode }) {
       }
       setProfileId(id);
 
-      // Try to fetch this profile's progress row.
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        setLoadError("signed-out");
+        setLoading(false);
+        return;
+      }
+
+      // maybeSingle: "no row" comes back as data null, a real failure as error.
       const { data, error } = await supabase
         .from("progress")
         .select("coins, gems, streak, last_played")
         .eq("profile_id", id)
-        .single();
+        .maybeSingle();
 
-      if (data && !error) {
+      if (error) {
+        setLoadError("offline");
+        setLoading(false);
+        return;
+      }
+
+      if (data) {
         // Row exists — load it into state.
         // clamp also repairs any negative totals saved by older versions
         const loaded = {
@@ -98,15 +117,22 @@ export function GameProvider({ children }: { children: ReactNode }) {
         setGameState(loaded);
       } else {
         // No row yet — create one with defaults so this kid is set up.
-        await supabase.from("progress").insert({
+        const { error: insertError } = await supabase.from("progress").insert({
           profile_id:  id,
           coins:       0,
           gems:        0,
           streak:      0,
           last_played: "",
         });
+        if (insertError) {
+          setLoadError("offline");
+          setLoading(false);
+          return;
+        }
         setGameState(DEFAULT_STATE);
       }
+
+      canSaveRef.current = true;
 
       setLoading(false);
     };
@@ -121,7 +147,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
   const saveToSupabase = (next: GameState) => {
     stateRef.current = next;
     const id = profileId ?? localStorage.getItem("levelup_active_profile");
-    if (!id) return;
+    if (!id || !canSaveRef.current) return;
     supabase
       .from("progress")
       .update({
@@ -197,6 +223,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
         streak:   gameState.streak,
         lastPlayed: gameState.lastPlayed,
         loading,
+        loadError,
         addCoins,
         addGems,
         spendCoins,

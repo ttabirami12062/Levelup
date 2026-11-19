@@ -159,9 +159,17 @@ function RoomContent() {
         .from("rooms")
         .select("owned_items, room_items")
         .eq("profile_id", profileId)
-        .single();
+        .maybeSingle();
 
-      if (data && !error) {
+      // A failed load leaves loadedRoomRef null, which keeps the save effect off,
+      // so a network blip can't replace the saved layout with the defaults.
+      if (error) {
+        setPlacedItems(DEFAULT_ROOM_ITEMS[roomId] || []);
+        setLoaded(true);
+        return;
+      }
+
+      if (data) {
         // Existing row — pull this room's slice and the owned list.
         const allRooms = (data.room_items as Record<string, PlacedItem[]>) || {};
         allRoomsRef.current = allRooms;

@@ -70,7 +70,7 @@ const HINT_FACTS = [
 function BattleScreen() {
   const router       = useRouter();
   const searchParams = useSearchParams();
-  const { addCoins, addGems, updateStreak } = useGame();
+  const { loading, addCoins, addGems, updateStreak } = useGame();
 
   const diff       = getDifficulty(searchParams.get("difficulty"));
   const difficulty = diff.id;
@@ -382,7 +382,7 @@ function BattleScreen() {
   }, [spawnWave, handleCollect, advanceWave, stepZeta, fallMs]);
 
   useEffect(() => {
-    if (gamePhase !== "countdown") return;
+    if (gamePhase !== "countdown" || loading) return;
     if (countdown <= 0) {
       const firstEq = generateEquation(START_LEVEL);
       setEquation(firstEq);
@@ -398,7 +398,7 @@ function BattleScreen() {
     }
     const t = setTimeout(() => setCountdown(c => c - 1), 1000);
     return () => clearTimeout(t);
-  }, [countdown, gamePhase, gameLoop, armZeta, updateStreak, START_LEVEL]);
+  }, [countdown, gamePhase, gameLoop, armZeta, updateStreak, START_LEVEL, loading]);
 
   useEffect(() => {
     return () => {

@@ -19,7 +19,7 @@ export default function Home() {
   const [avatarId, setAvatarId]               = useState(1);
   const [showMilestone, setShowMilestone]     = useState(false);
   const [showHelp, setShowHelp]               = useState(false);
-  const { coins, gems, streak, lastPlayed, loading } = useGame();
+  const { coins, gems, streak, lastPlayed, loading, loadError } = useGame();
   // Keep the coin loader on screen for a brief minimum so it always shows
   // a full spin, even when Supabase responds instantly.
   const [minTimePassed, setMinTimePassed] = useState(false);
@@ -63,10 +63,18 @@ export default function Home() {
   const nextMilestone = streak < 7 ? 7 : streak < 30 ? 30 : streak < 100 ? 100 : null;
   const nextMilestoneText = nextMilestone ? `at ${nextMilestone} days` : "legend status!";
 
+  useEffect(() => {
+    if (loadError === "signed-out") router.replace("/login");
+  }, [loadError, router]);
+
   // While the kid's coins/gems/streak load from Supabase, show a spinning coin
   // instead of flashing zeros.
-    if (loading || !minTimePassed) {
+  if (loading || !minTimePassed || loadError === "signed-out") {
     return <CoinLoader />;
+  }
+
+  if (loadError === "offline") {
+    return <OfflineCard />;
   }
 
   return (
@@ -419,6 +427,35 @@ export default function Home() {
       )}
 
     </main>
+  );
+}
+
+// Shown when Supabase can't be reached, so kids never play a round that won't save.
+function OfflineCard() {
+  return (
+    <div style={{ width: "100%", height: "100vh", display: "flex", alignItems: "center", justifyContent: "center", padding: 20, background: "linear-gradient(to bottom, #5BB8F5, #C9EEFF)" }}>
+      <div style={{ background: "white", borderRadius: 28, padding: "28px 24px", maxWidth: 340, width: "100%", textAlign: "center", boxShadow: "0 14px 40px rgba(0,0,0,0.15)" }}>
+        <svg width="64" height="48" viewBox="0 0 64 48" style={{ marginBottom: 8 }}>
+          <ellipse cx="22" cy="30" rx="16" ry="12" fill="#C9EEFF" />
+          <ellipse cx="36" cy="22" rx="18" ry="16" fill="#C9EEFF" />
+          <ellipse cx="48" cy="32" rx="13" ry="10" fill="#C9EEFF" />
+          <rect x="10" y="30" width="48" height="12" rx="6" fill="#C9EEFF" />
+          <ellipse cx="28" cy="28" rx="2.5" ry="3" fill="#5A5A7A" />
+          <ellipse cx="40" cy="28" rx="2.5" ry="3" fill="#5A5A7A" />
+          <path d="M28 37 Q34 33 40 37" stroke="#5A5A7A" strokeWidth="2" fill="none" strokeLinecap="round" />
+        </svg>
+        <div style={{ fontFamily: "var(--font-game)", fontSize: 22, color: "#1A1A2E", marginBottom: 6 }}>Oops, we lost the internet!</div>
+        <div style={{ fontFamily: "var(--font-ui)", fontSize: 14, color: "#5A5A7A", lineHeight: 1.5, marginBottom: 20 }}>
+          Your coins are safe. Check your Wi-Fi, then tap the button to try again.
+        </div>
+        <button
+          onClick={() => window.location.reload()}
+          style={{ width: "100%", background: "linear-gradient(to bottom, #FFD700, #F5A623)", border: "none", borderRadius: 99, padding: 14, fontFamily: "var(--font-game)", fontSize: 16, color: "white", cursor: "pointer", boxShadow: "0 4px 0 #C47A10" }}
+        >
+          try again
+        </button>
+      </div>
+    </div>
   );
 }
 

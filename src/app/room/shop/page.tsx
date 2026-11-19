@@ -12,7 +12,7 @@ type Category = "furniture" | "walls" | "floor" | "special" | "garden";
 function ShopContent() {
   const router       = useRouter();
   const searchParams = useSearchParams();
-  const { coins, gems, spendCoins, spendGems } = useGame();
+  const { coins, gems, spendCoins, spendGems, addCoins, addGems } = useGame();
 
   const roomId = Number(searchParams.get("id")) || 1;
 
@@ -23,6 +23,7 @@ function ShopContent() {
   const [buySuccess, setBuySuccess]     = useState(false);
   // Buying before the owned list loads would overwrite earlier purchases.
   const [loaded, setLoaded]             = useState(false);
+  const [offline, setOffline]           = useState(false);
 
   // Load the kid's owned list + room layouts from Supabase.
   useEffect(() => {
@@ -34,14 +35,16 @@ function ShopContent() {
         .from("rooms")
         .select("owned_items, room_items")
         .eq("profile_id", profileId)
-        .single();
+        .maybeSingle();
 
-      if (data && !error) {
+      if (error) { setOffline(true); return; }
+      if (data) {
         const owned = (data.owned_items as string[]) || [];
         setOwnedItems([...new Set([...FREE_ITEMS, ...owned])]);
       } else {
         // First visit straight to the shop: create the row so purchases have somewhere to save.
-        await supabase.from("rooms").insert({ profile_id: profileId, owned_items: [], room_items: {}, room_version: "v2" });
+        const { error: insertError } = await supabase.from("rooms").insert({ profile_id: profileId, owned_items: [], room_items: {}, room_version: "v2" });
+        if (insertError) { setOffline(true); return; }
       }
       setLoaded(true);
     };
@@ -52,27 +55,19 @@ function ShopContent() {
 
   const handleBuy = () => {
     if (!selectedItem || !loaded) return;
+    const item = selectedItem;
     if (ownedItems.includes(selectedItem.id)) return;
 
-    if (selectedItem.currency === "coins") {
-      if (coins < selectedItem.price) {
-        setBuyMessage("not enough coins!");
-        setBuySuccess(false);
-        setTimeout(() => setBuyMessage(null), 2000);
-        return;
-      }
-      spendCoins(selectedItem.price);
-    } else {
-      if (gems < selectedItem.price) {
-        setBuyMessage("not enough gems!");
-        setBuySuccess(false);
-        setTimeout(() => setBuyMessage(null), 2000);
-        return;
-      }
-      spendGems(selectedItem.price);
+    // spend* re-checks the true total, so a double tap can't buy twice or for free.
+    const paid = item.currency === "coins" ? spendCoins(item.price) : spendGems(item.price);
+    if (!paid) {
+      setBuyMessage(`not enough ${item.currency}!`);
+      setBuySuccess(false);
+      setTimeout(() => setBuyMessage(null), 2000);
+      return;
     }
 
-    const newOwned = [...ownedItems, selectedItem.id];
+    const newOwned = [...new Set([...ownedItems, item.id])];
     setOwnedItems(newOwned);
 
     // Save ONLY the owned list to Supabase. Do NOT auto-place the item into
@@ -88,7 +83,14 @@ function ShopContent() {
         })
         .eq("profile_id", profileId)
         .then(({ error }) => {
-          if (error) console.error("Failed to save purchase:", error.message);
+          if (!error) return;
+          // Couldn't save the purchase: give the coins or gems back and un-own the item.
+          console.error("Failed to save purchase:", error.message);
+          if (item.currency === "coins") addCoins(item.price); else addGems(item.price);
+          setOwnedItems(prev => prev.filter(id => id !== item.id));
+          setBuyMessage("couldn't reach the shop, your coins are back!");
+          setBuySuccess(false);
+          setTimeout(() => setBuyMessage(null), 2500);
         });
     }
 
@@ -358,7 +360,9 @@ function ShopContent() {
             textShadow: "0 1px 4px rgba(0,0,0,0.15)",
           }}
         >
-          {!loaded
+          {offline
+            ? "can't reach the shop, check your internet"
+            : !loaded
             ? "loading your items..."
             : !selectedItem
             ? "select an item first"
