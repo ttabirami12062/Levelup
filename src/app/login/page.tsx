@@ -95,7 +95,7 @@ export default function LoginPage() {
       // Supabase holds back the session until the email link is clicked.
       if (!data.session) {
         setMode('signin');
-        setNotice('Check your email and tap the link to confirm, then sign in here.');
+        setNotice("Check your email and tap the link to confirm, then sign in here. Can't find it? Look in your Spam or Junk folder.");
         setLoading(false);
         return;
       }
@@ -302,7 +302,7 @@ export default function LoginPage() {
               style={{ ...inputStyle, borderColor: password2 && password2 !== password ? '#E85454' : password2 ? '#5DBE4A' : '#d8d8e8' }}
             />
             <p style={{ fontSize: 12, color: '#9a9ab0', margin: '10px 0 0', textAlign: 'center' }}>
-              We&apos;ll send a link to your email to make sure it&apos;s really you.
+              We&apos;ll send a link to your email to make sure it&apos;s really you. If it doesn&apos;t show up, check your Spam folder.
             </p>
           </>
         )}
@@ -360,7 +360,7 @@ function friendlyAuthError(message: string): string {
   if (!m || m === '{}' || m.includes('sending confirmation email')) {
     return "We couldn't send the confirmation email right now. Please try again in a few minutes.";
   }
-  if (m.includes('email not confirmed')) return 'Please tap the link in your confirmation email first, then sign in.';
+  if (m.includes('email not confirmed')) return 'Please tap the link in your confirmation email first, then sign in. It might be in your Spam folder.';
   if (m.includes('invalid login credentials')) return "That email and password don't match. Try again?";
   if (m.includes('already registered')) return 'This email already has an account. Tap Sign in below.';
   if (m.includes('rate limit')) return 'Too many tries. Please wait a few minutes and try again.';
