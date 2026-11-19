@@ -49,7 +49,12 @@ export default function LoginPage() {
 
     if (mode === 'signup') {
       // create a brand-new parent account
-      const { data, error } = await supabase.auth.signUp({ email, password });
+      // The confirm link in the email brings the parent straight back to the player picker.
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: { emailRedirectTo: `${window.location.origin}/profiles` },
+      });
       if (error) {
         setError(error.message);
         setLoading(false);

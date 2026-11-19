@@ -41,3 +41,9 @@ create policy "parents manage own kids progress" on public.progress
 create policy "parents manage own kids rooms" on public.rooms
   for all using (exists (select 1 from public.profiles p where p.id = profile_id and p.parent_id = auth.uid()))
   with check (exists (select 1 from public.profiles p where p.id = profile_id and p.parent_id = auth.uid()));
+
+-- Called once a day by Vercel Cron (/api/keep-alive) so the free plan never
+-- pauses the project for inactivity. It only returns the time; it can't read any data.
+create or replace function public.keep_alive() returns timestamptz
+  language sql stable as $$ select now() $$;
+grant execute on function public.keep_alive() to anon;
