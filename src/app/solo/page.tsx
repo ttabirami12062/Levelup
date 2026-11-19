@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useSyncExternalStore, useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useGame } from "@/lib/gameContext";
 
@@ -84,7 +84,7 @@ const HINT_FACTS = [
   { fact: "Pi has been calculated to over 100 trillion digits!", hint: "Use your fingers to count if needed." },
 ];
 
-export default function SoloGame() {
+function SoloGameScreen() {
   const router = useRouter();
   const { addCoins, addGems, updateStreak } = useGame();
 
@@ -790,4 +790,12 @@ function Bush() {
       <div style={{ position: "absolute", bottom: 9, right: "14%", width: 22, height: 22, background: "#5DBE4A", borderRadius: "50%" }} />
     </div>
   );
+}
+const noopSubscribe = () => () => {};
+
+// The game measures the window to place lanes, so it only renders in the browser.
+export default function SoloGame() {
+  const mounted = useSyncExternalStore(noopSubscribe, () => true, () => false);
+  if (!mounted) return <div style={{ width: "100%", height: "100vh", background: "#5BB8F5" }} />;
+  return <SoloGameScreen />;
 }

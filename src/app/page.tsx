@@ -7,9 +7,10 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { supabase } from "@/lib/supabase";
 
 // useRouter lets us navigate between pages
-// When a kid taps Play it sends them to /onboarding
+// Play sends signed-in families to the player picker, everyone else to parent login
 
 export default function Home() {
   const router = useRouter();
@@ -18,9 +19,11 @@ export default function Home() {
   // This function runs when the Play button is tapped
   const handlePlay = () => {
     setPressed(true);
-    setTimeout(() => {
-      router.push("/onboarding");
-    }, 200);
+    supabase.auth.getSession().then(({ data }) => {
+      setTimeout(() => {
+        router.push(data.session ? "/profiles" : "/login");
+      }, 200);
+    });
   };
 
   return (

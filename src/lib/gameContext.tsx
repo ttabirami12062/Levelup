@@ -16,6 +16,7 @@ interface GameContextType {
   coins:     number;
   gems:      number;
   streak:    number;
+  lastPlayed: string;
   loading:   boolean; // true while we fetch from Supabase — screens can wait on this
   addCoins:  (amount: number) => void;
   addGems:   (amount: number) => void;
@@ -115,7 +116,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
   // ── ADD COINS ──
   const addCoins = (amount: number) => {
     setGameState((prev) => {
-      const next = { ...prev, coins: prev.coins + amount };
+      const next = { ...prev, coins: Math.max(0, prev.coins + amount) };
       saveToSupabase(next);
       return next;
     });
@@ -192,6 +193,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
         coins:    gameState.coins,
         gems:     gameState.gems,
         streak:   gameState.streak,
+        lastPlayed: gameState.lastPlayed,
         loading,
         addCoins,
         addGems,

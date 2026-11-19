@@ -17,7 +17,7 @@ export default function Home() {
   const [name, setName]                       = useState("Player");
   const [avatarId, setAvatarId]               = useState(1);
   const [showMilestone, setShowMilestone]     = useState(false);
-  const { coins, gems, streak, loading } = useGame();
+  const { coins, gems, streak, lastPlayed, loading } = useGame();
   // Keep the coin loader on screen for a brief minimum so it always shows
   // a full spin, even when Supabase responds instantly.
   const [minTimePassed, setMinTimePassed] = useState(false);
@@ -29,18 +29,23 @@ export default function Home() {
   const avatarMeta = getAvatarById(avatarId);
   const AvatarComponent = avatarMeta.component;
 
-  // Load name and avatar from localStorage
+  // Load name and avatar from localStorage. No active player means progress
+  // can't be saved, so send them to the picker first.
   useEffect(() => {
+    if (!localStorage.getItem("levelup_active_profile")) {
+      router.replace("/profiles");
+      return;
+    }
     const savedName   = localStorage.getItem("levelup_name");
     const savedAvatar = localStorage.getItem("levelup_avatar");
     if (savedName)   setName(savedName);
     if (savedAvatar) setAvatarId(Number(savedAvatar));
-  }, []);
+  }, [router]);
 
   // Has the kid already played today? Compare the streak's last-played
   // date (from Supabase, via game context) against today.
   const today = new Date().toDateString();
-  const playedToday = streak > 0; // streak only counts up once a day is played
+  const playedToday = lastPlayed === today;
 
   // Check for milestone celebration
   useEffect(() => {
@@ -79,9 +84,11 @@ export default function Home() {
         {/* ── TOP BAR ── */}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <div
+            <button
+              onClick={() => router.push("/profiles")}
+              aria-label="Switch player"
               style={{
-                width: 52, height: 52, borderRadius: "50%",
+                width: 52, height: 52, borderRadius: "50%", padding: 0, cursor: "pointer",
                 background: avatarMeta.color, border: `3px solid ${avatarMeta.shadow}`,
                 display: "flex", alignItems: "flex-end", justifyContent: "center",
                 boxShadow: "0 4px 12px rgba(0,0,0,0.15)", overflow: "hidden",
@@ -91,7 +98,7 @@ export default function Home() {
               <div style={{ width: 46, height: 69, marginBottom: -12 }}>
                 <AvatarComponent />
               </div>
-            </div>
+            </button>
             <div>
               <div style={{ fontSize: 11, color: "rgba(255,255,255,0.85)", fontFamily: "var(--font-ui)" }}>
                 welcome back
