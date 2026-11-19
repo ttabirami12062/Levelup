@@ -570,10 +570,11 @@ function RoomIcon({ id, unlocked }: { id: number; unlocked: boolean }) {
 
 function ShopBagIcon() {
   return (
-    <svg width="16" height="17" viewBox="0 0 16 17">
-      <path d="M5 6 V4.5 a3 3 0 0 1 6 0 V6" fill="none" stroke="white" strokeWidth="1.8" strokeLinecap="round"/>
-      <rect x="2" y="5.5" width="12" height="10" rx="2.5" fill="#FFE066" stroke="#C49A1A" strokeWidth="1.2"/>
-      <circle cx="8" cy="10.5" r="1.6" fill="#F5A623"/>
+    <svg width="18" height="17" viewBox="0 0 26 24">
+      <path d="M3 9 L5 3 L21 3 L23 9 Z" fill="#E85454" stroke="white" strokeWidth="1.4" strokeLinejoin="round" />
+      <path d="M8.5 3 L8 9 M13 3 L13 9 M17.5 3 L18 9" stroke="white" strokeWidth="1.6" />
+      <rect x="4" y="9" width="18" height="13" rx="2" fill="#FFE066" stroke="white" strokeWidth="1.4" />
+      <rect x="10" y="13" width="6" height="9" rx="1" fill="#C8874A" />
     </svg>
   );
 }
