@@ -34,12 +34,12 @@ export interface ShopItem {
   footprint: { w: number; d: number };
 }
 
-// Coin prices top out at 150. A good Solo game earns about 3 to 6 coins, so small
-// items take a few games and the biggest ones are a goal worth saving up for.
+// Coin prices run from 30 to 150. A good Solo game earns about 3 to 6 coins, so even
+// small items take a little saving and the biggest ones are a real goal.
 export const ALL_ITEMS: ShopItem[] = [
   { id: "bed",        name: "Bed",          category: "furniture", price: 60, currency: "coins", footprint: { w: 2, d: 2 } },
   { id: "desk",       name: "Desk + Lamp",  category: "furniture", price: 30,  currency: "coins", footprint: { w: 1, d: 1 } },
-  { id: "plant",      name: "Plant",        category: "furniture", price: 20,  currency: "coins", footprint: { w: 1, d: 1 } },
+  { id: "plant",      name: "Plant",        category: "furniture", price: 30,  currency: "coins", footprint: { w: 1, d: 1 } },
   { id: "sofa",       name: "Sofa",         category: "furniture", price: 90, currency: "coins", footprint: { w: 2, d: 1 } },
   { id: "armchair",   name: "Armchair",     category: "furniture", price: 60, currency: "coins", footprint: { w: 1, d: 1 } },
   { id: "coffeetable",name: "Coffee Table", category: "furniture", price: 40,  currency: "coins", footprint: { w: 1, d: 1 } },
@@ -48,18 +48,18 @@ export const ALL_ITEMS: ShopItem[] = [
   { id: "beanbag",    name: "Bean Bag",     category: "furniture", price: 35,  currency: "coins", footprint: { w: 1, d: 1 } },
   { id: "wardrobe",   name: "Wardrobe",     category: "furniture", price: 80, currency: "coins", footprint: { w: 1, d: 1 } },
   { id: "vanity",     name: "Vanity Table", category: "furniture", price: 70, currency: "coins", footprint: { w: 1, d: 1 } },
-  { id: "nightstand", name: "Nightstand",   category: "furniture", price: 25,  currency: "coins", footprint: { w: 1, d: 1 } },
+  { id: "nightstand", name: "Nightstand",   category: "furniture", price: 35,  currency: "coins", footprint: { w: 1, d: 1 } },
   { id: "floorlamp",  name: "Floor Lamp",   category: "furniture", price: 30,  currency: "coins", footprint: { w: 1, d: 1 } },
   { id: "fireplace",  name: "Fireplace",    category: "furniture", price: 120, currency: "coins", footprint: { w: 1, d: 1 } },
   { id: "door",       name: "Door",         category: "walls",     price: 40,  currency: "coins", footprint: { w: 1, d: 2 } },
   { id: "window",     name: "Window",       category: "walls",     price: 0,   currency: "coins", footprint: { w: 2, d: 1 } },
-  { id: "poster",     name: "Star Poster",  category: "walls",     price: 15,  currency: "coins", footprint: { w: 1, d: 1 } },
+  { id: "poster",     name: "Star Poster",  category: "walls",     price: 30,  currency: "coins", footprint: { w: 1, d: 1 } },
   { id: "clock",      name: "Magic Clock",  category: "walls",     price: 45, currency: "coins", footprint: { w: 1, d: 1 } },
   { id: "painting",   name: "Painting",     category: "walls",     price: 35, currency: "coins", footprint: { w: 1, d: 1 } },
   { id: "wallmirror", name: "Wall Mirror",  category: "walls",     price: 30, currency: "coins", footprint: { w: 1, d: 1 } },
-  { id: "wallshelf",  name: "Wall Shelf",   category: "walls",     price: 25, currency: "coins", footprint: { w: 1, d: 1 } },
+  { id: "wallshelf",  name: "Wall Shelf",   category: "walls",     price: 35, currency: "coins", footprint: { w: 1, d: 1 } },
   { id: "rug",        name: "Purple Rug",   category: "floor",     price: 30,  currency: "coins", footprint: { w: 2, d: 2 } },
-  { id: "floorplant", name: "Floor Plant",  category: "floor",     price: 25,  currency: "coins", footprint: { w: 1, d: 1 } },
+  { id: "floorplant", name: "Floor Plant",  category: "floor",     price: 35,  currency: "coins", footprint: { w: 1, d: 1 } },
   { id: "trophy",     name: "Trophy",       category: "special",   price: 3,   currency: "gems",  footprint: { w: 1, d: 1 } },
   { id: "galaxy",     name: "Galaxy Map",   category: "special",   price: 5,   currency: "gems",  footprint: { w: 1, d: 1 } },
   { id: "wand",       name: "Magic Broom",  category: "special",   price: 150, currency: "coins", footprint: { w: 1, d: 1 } },
@@ -75,7 +75,7 @@ export const ALL_ITEMS: ShopItem[] = [
   { id: "birdbath",   name: "Bird Bath",    category: "garden",    price: 55, currency: "coins", footprint: { w: 1, d: 1 } },
   { id: "pond",       name: "Pond",         category: "garden",    price: 4,   currency: "gems",  footprint: { w: 2, d: 2 } },
   { id: "swingset",   name: "Swing Set",    category: "garden",    price: 110, currency: "coins", footprint: { w: 2, d: 1 } },
-  { id: "wateringcan",name: "Watering Can", category: "garden",    price: 15, currency: "coins", footprint: { w: 1, d: 1 } },
+  { id: "wateringcan",name: "Watering Can", category: "garden",    price: 30, currency: "coins", footprint: { w: 1, d: 1 } },
   { id: "trampoline", name: "Trampoline",   category: "garden",    price: 140, currency: "coins", footprint: { w: 2, d: 2 } },
   { id: "hammock",    name: "Hammock",      category: "garden",    price: 75,  currency: "coins", footprint: { w: 2, d: 1 } },
 ];
