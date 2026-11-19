@@ -15,7 +15,8 @@ Landing (`/`) → `/login` (Google or email, parent only) → `/profiles` (kid p
 - VS AI: rival Zeta, first to 5. Settings live in `src/lib/vsAi.ts`; the battle URL carries only `?difficulty=`. Stones take a fixed time to fall (Easy 6s / Medium 7s / Hard 9s). Zeta answers at 0.78 to 1.18x that time on Easy and Medium (0.8 to 1.2x on Hard), sometimes grabs a wrong stone, and eases off when 2+ ahead. Zeta runs on the game loop clock, so the hint screen pauses it. Rewards Easy 1c, Medium 3c, Hard 5c + 1 gem. Rematch uses `window.location.href`, not `router.push`.
 - Streak: same day no change, yesterday +1, otherwise reset to 1. Rewards in `STREAK_MILESTONES` (gameContext): 7 days 5c, 30 days 15c + 1 gem, 100 days 50c + 3 gems; other 10th days +2c. Celebration popup on Home shows once per milestone.
 - Coins and gems never go below 0 (clamped in gameContext, including on load).
-- Items: only the plant is free (`STARTER_ITEMS`). Door and window are room fixtures (`ROOM_FIXTURES`), not sold. Everything else is bought.
+- Items: only the plant is free (`STARTER_ITEMS`). The window is a room fixture (`ROOM_FIXTURES`), not sold. Everything else, including the door (60c), is bought.
+- Solo coin display: starting total stays fixed during play, with separate +earned and -lost trackers. "end game" opens `CoinSummary` (start + earned - lost = new total, counts up, coin shakes). `addCoins`/`addGems` return the change actually applied, so lost coins at 0 aren't counted.
 
 ## Adding a shop item
 Add it to `ALL_ITEMS` in `src/app/room/page.tsx`, draw its sprite in `FlatSprite` and give it a box in `SPRITE_SIZE` (height must match the drawing's shape). The shop has its own small drawings in `ItemSVGMini` in `src/app/room/shop/page.tsx`, so draw it there too or it shows a "?".

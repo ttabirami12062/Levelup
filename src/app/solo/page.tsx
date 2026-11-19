@@ -89,16 +89,20 @@ const HINT_FACTS = [
 
 function SoloGameScreen() {
   const router = useRouter();
-  const { addCoins, addGems, updateStreak } = useGame();
+  const { coins, loading, addCoins, addGems, updateStreak } = useGame();
 
   const [equation, setEquation]         = useState<Equation>({ question: "Get ready!", answer: 0, type: "add" });
   const [stones, setStones]             = useState<Stone[]>([]);
   const [avatarLane, setAvatarLane]     = useState(1);
   const [level, setLevel]               = useState(1);
   const [score, setScore]               = useState(0);
-  const [sessionCoins, setSessionCoins] = useState(0);
+  // Coins are tracked three ways so kids can see the math: the total they started
+  // with, what they earned, and what they lost. The total only "moves" at the end.
+  const [startCoins, setStartCoins]     = useState(0);
+  const [coinsEarned, setCoinsEarned]   = useState(0);
+  const [coinsLost, setCoinsLost]       = useState(0);
   const [sessionGems, setSessionGems]   = useState(0);
-  const [gamePhase, setGamePhase]       = useState<"countdown" | "playing">("countdown");
+  const [gamePhase, setGamePhase]       = useState<"countdown" | "playing" | "summary">("countdown");
   const [countdown, setCountdown]       = useState(3);
   const [timerWidth, setTimerWidth]     = useState(100);
   const [rewardPops, setRewardPops]     = useState<RewardPop[]>([]);
@@ -123,7 +127,8 @@ function SoloGameScreen() {
   const timerRef        = useRef(100);
   const negRef          = useRef(0);
   const scoreRef        = useRef(0);
-  const sessionCoinsRef = useRef(0);
+  const earnedRef       = useRef(0);
+  const lostRef         = useRef(0);
   const sessionGemsRef  = useRef(0);
   const worldHRef       = useRef(0);
   // Tracks which stone ids have already been processed, so the same stone
@@ -205,18 +210,16 @@ function SoloGameScreen() {
           setTimeout(() => setGemCelebration(false), 1800);
         } else if (roll > 0.82) {
           // ~14% chance — 2 coins
-          addCoins(2);
-          sessionCoinsRef.current += 2;
-          setSessionCoins(sessionCoinsRef.current);
+          earnedRef.current += addCoins(2);
+          setCoinsEarned(earnedRef.current);
           rewardText = "+2 coins!";
           popType = "coins";
           setRewardFlash("coins");
           setTimeout(() => setRewardFlash(null), 1200);
         } else {
           // ~82% chance — 1 coin
-          addCoins(1);
-          sessionCoinsRef.current += 1;
-          setSessionCoins(sessionCoinsRef.current);
+          earnedRef.current += addCoins(1);
+          setCoinsEarned(earnedRef.current);
           rewardText = "+1 coin";
           popType = "coin";
           setRewardFlash("coin");
@@ -274,11 +277,14 @@ function SoloGameScreen() {
 
       // Every 2 wrong answers — lose 1 coin
       if (negRef.current % PENALTY_EVERY === 0) {
-        addCoins(-1);
-        sessionCoinsRef.current = Math.max(0, sessionCoinsRef.current - 1);
-        setSessionCoins(sessionCoinsRef.current);
-        setCoinLost(true);
-        setTimeout(() => setCoinLost(false), 1200);
+        // Only counts as lost if there was a coin to take; totals never go below 0.
+        const taken = -addCoins(-1);
+        if (taken > 0) {
+          lostRef.current += taken;
+          setCoinsLost(lostRef.current);
+          setCoinLost(true);
+          setTimeout(() => setCoinLost(false), 1200);
+        }
       }
 
       const popId = Date.now() + Math.random();
@@ -363,7 +369,7 @@ function SoloGameScreen() {
   }, [spawnWave, handleCollect]);
 
   useEffect(() => {
-    if (gamePhase !== "countdown") return;
+    if (gamePhase !== "countdown" || loading) return;
     if (countdown <= 0) {
       const firstEq = generateEquation(1);
       setEquation(firstEq);
@@ -377,7 +383,19 @@ function SoloGameScreen() {
     }
     const timer = setTimeout(() => setCountdown(c => c - 1), 1000);
     return () => clearTimeout(timer);
-  }, [countdown, gamePhase, gameLoop, updateStreak]);
+  }, [countdown, gamePhase, gameLoop, updateStreak, loading]);
+
+  // Runs in the same render that starts play, so it includes any streak bonus
+  // updateStreak just added.
+  useEffect(() => {
+    if (gamePhase === "playing" && earnedRef.current === 0 && lostRef.current === 0) setStartCoins(coins);
+  }, [gamePhase]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const endGame = () => {
+    if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
+    gamePhaseRef.current = "summary";
+    setGamePhase("summary");
+  };
 
   useEffect(() => {
     return () => { if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current); };
@@ -464,27 +482,34 @@ function SoloGameScreen() {
               </span>
             </div>
 
-            {/* Coin badge */}
+            {/* Starting total — stays put until the end-of-game summary adds it up */}
+            <div style={{ background: "rgba(245,200,66,0.18)", borderRadius: 99, padding: "4px 12px", display: "flex", alignItems: "center", gap: 5 }}>
+              <CoinSVG size={16} />
+              <span style={{ fontFamily: "var(--font-game)", fontSize: 14, color: "#F5C842" }}>{startCoins}</span>
+            </div>
+
+            {/* Coins earned this game */}
             <div
               style={{
-                background: coinLost ? "rgba(232,84,84,0.25)" : rewardFlash === "coin" || rewardFlash === "coins" ? "rgba(245,200,66,0.35)" : "rgba(245,200,66,0.18)",
-                borderRadius: 99,
-                padding: "4px 12px",
-                display: "flex",
-                alignItems: "center",
-                gap: 5,
-                border: coinLost ? "1.5px solid #E85454" : rewardFlash === "coin" || rewardFlash === "coins" ? "1.5px solid #FFD700" : "1.5px solid transparent",
-                transition: "all 0.3s ease",
-                boxShadow: rewardFlash === "coin" || rewardFlash === "coins" ? "0 0 12px rgba(255,215,0,0.5)" : "none",
+                background: rewardFlash === "coin" || rewardFlash === "coins" ? "rgba(93,190,74,0.45)" : "rgba(93,190,74,0.18)",
+                border: rewardFlash === "coin" || rewardFlash === "coins" ? "1.5px solid #7BD862" : "1.5px solid transparent",
+                boxShadow: rewardFlash === "coin" || rewardFlash === "coins" ? "0 0 12px rgba(93,190,74,0.6)" : "none",
+                borderRadius: 99, padding: "4px 10px", transition: "all 0.3s ease",
               }}
             >
-              <CoinSVG size={16} />
-              <span style={{ fontFamily: "var(--font-game)", fontSize: 14, color: coinLost ? "#E85454" : "#F5C842", transition: "color 0.3s ease" }}>
-                {sessionCoins}
-              </span>
-              {coinLost && <span style={{ fontFamily: "var(--font-game)", fontSize: 11, color: "#E85454" }}>−1!</span>}
-              {(rewardFlash === "coin") && <span style={{ fontFamily: "var(--font-game)", fontSize: 11, color: "#FFD700" }}>+1!</span>}
-              {(rewardFlash === "coins") && <span style={{ fontFamily: "var(--font-game)", fontSize: 11, color: "#FFD700" }}>+2!</span>}
+              <span style={{ fontFamily: "var(--font-game)", fontSize: 14, color: "#7BD862" }}>+{coinsEarned}</span>
+            </div>
+
+            {/* Coins lost this game */}
+            <div
+              style={{
+                background: coinLost ? "rgba(232,84,84,0.45)" : "rgba(232,84,84,0.18)",
+                border: coinLost ? "1.5px solid #FF7B7B" : "1.5px solid transparent",
+                boxShadow: coinLost ? "0 0 12px rgba(232,84,84,0.6)" : "none",
+                borderRadius: 99, padding: "4px 10px", transition: "all 0.3s ease",
+              }}
+            >
+              <span style={{ fontFamily: "var(--font-game)", fontSize: 14, color: "#FF7B7B" }}>−{coinsLost}</span>
             </div>
 
             {/* Gem badge */}
@@ -662,6 +687,16 @@ function SoloGameScreen() {
         )}
       </div>
 
+      {gamePhase === "summary" && (
+        <CoinSummary
+          start={startCoins}
+          earned={coinsEarned}
+          lost={coinsLost}
+          gems={sessionGems}
+          onDone={() => router.push("/home")}
+        />
+      )}
+
       {/* CONTROLS */}
       <div style={{ display: "flex", height: 72, background: "rgba(26,26,46,0.9)", flexShrink: 0, zIndex: 20 }}>
         <button
@@ -698,13 +733,10 @@ function SoloGameScreen() {
       {/* QUIT BAR */}
       <div style={{ background: "rgba(26,26,46,0.95)", padding: "6px 20px", display: "flex", justifyContent: "center", alignItems: "center", flexShrink: 0, zIndex: 20 }}>
         <button
-          onClick={() => {
-            if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
-            router.push("/home");
-          }}
+          onClick={endGame}
           style={{ background: "rgba(232,84,84,0.15)", border: "1.5px solid #E85454", borderRadius: 99, padding: "6px 28px", fontFamily: "var(--font-game)", fontSize: 13, color: "#E85454", cursor: "pointer" }}
         >
-          quit
+          end game
         </button>
       </div>
 
@@ -727,6 +759,91 @@ function SoloGameScreen() {
         }
       `}</style>
     </main>
+  );
+}
+
+// End-of-game pop: shows start + earned − lost, then counts the total up (or
+// down) to the new amount and gives the coin a happy shake when it lands.
+function CoinSummary({ start, earned, lost, gems, onDone }: { start: number; earned: number; lost: number; gems: number; onDone: () => void }) {
+  const final = Math.max(0, start + earned - lost);
+  const [step, setStep]   = useState(0);
+  const [shown, setShown] = useState(start);
+
+  useEffect(() => {
+    const timers = [
+      setTimeout(() => setStep(1), 400),
+      setTimeout(() => setStep(2), 900),
+      setTimeout(() => setStep(3), 1400),
+    ];
+    return () => timers.forEach(clearTimeout);
+  }, []);
+
+  useEffect(() => {
+    if (step < 3 || shown === final) return;
+    const t = setTimeout(() => setShown(n => n + Math.sign(final - n)), Math.max(40, 600 / Math.max(1, Math.abs(final - start))));
+    return () => clearTimeout(t);
+  }, [step, shown, final, start]);
+
+  const row = (visible: boolean): React.CSSProperties => ({
+    display: "flex", justifyContent: "space-between", alignItems: "center",
+    padding: "8px 14px", borderRadius: 14, marginBottom: 8,
+    opacity: visible ? 1 : 0, transform: visible ? "translateY(0) scale(1)" : "translateY(8px) scale(0.9)",
+    transition: "all 300ms cubic-bezier(0.34,1.56,0.64,1)",
+  });
+
+  return (
+    <div style={{ position: "fixed", inset: 0, background: "rgba(26,26,46,0.85)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100, padding: 20 }}>
+      <div style={{ background: "white", borderRadius: 28, padding: "24px 20px", width: "100%", maxWidth: 340, textAlign: "center", boxShadow: "0 20px 60px rgba(0,0,0,0.3)", animation: "gemPop 0.5s ease" }}>
+        <div style={{ fontFamily: "var(--font-game)", fontSize: 26, color: "#1A1A2E", marginBottom: 4 }}>Great game!</div>
+        <div style={{ fontFamily: "var(--font-ui)", fontSize: 13, color: "#5A5A7A", marginBottom: 16 }}>here&apos;s how your coins added up</div>
+
+        <div style={{ ...row(true), background: "#FFF8E6" }}>
+          <span style={{ fontFamily: "var(--font-ui)", fontWeight: 700, fontSize: 14, color: "#7A5A00" }}>You started with</span>
+          <span style={{ fontFamily: "var(--font-game)", fontSize: 18, color: "#C47A10" }}>{start}</span>
+        </div>
+        <div style={{ ...row(step >= 1), background: "#EAF7E6" }}>
+          <span style={{ fontFamily: "var(--font-ui)", fontWeight: 700, fontSize: 14, color: "#2E7D32" }}>You earned</span>
+          <span style={{ fontFamily: "var(--font-game)", fontSize: 18, color: "#3D9E2A" }}>+ {earned}</span>
+        </div>
+        <div style={{ ...row(step >= 2), background: "#FFECEC" }}>
+          <span style={{ fontFamily: "var(--font-ui)", fontWeight: 700, fontSize: 14, color: "#A02020" }}>You lost</span>
+          <span style={{ fontFamily: "var(--font-game)", fontSize: 18, color: "#E85454" }}>− {lost}</span>
+        </div>
+
+        <div style={{ height: 3, background: "#ECEBFA", borderRadius: 2, margin: "6px 0 12px" }} />
+
+        <div style={{ fontFamily: "var(--font-ui)", fontSize: 13, color: "#9898B8", marginBottom: 4, opacity: step >= 3 ? 1 : 0, transition: "opacity 300ms" }}>
+          {start} + {earned} − {lost} = {final}
+        </div>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, marginBottom: 6, animation: step >= 3 && shown === final ? "coinShake 0.6s ease" : undefined }}>
+          <CoinSVG size={40} />
+          <span style={{ fontFamily: "var(--font-game)", fontSize: 44, color: "#F5A623", textShadow: "0 3px 0 #C47A10" }}>{shown}</span>
+        </div>
+        {gems > 0 && (
+          <div style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "#F3F0FF", borderRadius: 99, padding: "5px 14px", marginBottom: 6, opacity: step >= 3 ? 1 : 0, transition: "opacity 300ms" }}>
+            <GemSVG size={16} />
+            <span style={{ fontFamily: "var(--font-game)", fontSize: 14, color: "#6A4FC4" }}>+ {gems} {gems === 1 ? "gem" : "gems"}</span>
+          </div>
+        )}
+
+        <button
+          onClick={onDone}
+          style={{ width: "100%", marginTop: 12, background: "linear-gradient(to bottom, #FFD700, #F5A623)", border: "none", borderRadius: 99, padding: 14, fontFamily: "var(--font-game)", fontSize: 16, color: "white", cursor: "pointer", boxShadow: "0 4px 0 #C47A10" }}
+        >
+          back home
+        </button>
+      </div>
+      <style>{`
+        @keyframes coinShake {
+          0%   { transform: scale(1) rotate(0deg); }
+          20%  { transform: scale(1.25) rotate(-10deg); }
+          40%  { transform: scale(1.25) rotate(10deg); }
+          60%  { transform: scale(1.15) rotate(-6deg); }
+          80%  { transform: scale(1.05) rotate(3deg); }
+          100% { transform: scale(1) rotate(0deg); }
+        }
+      `}</style>
+    </div>
   );
 }
 

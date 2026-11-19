@@ -18,8 +18,8 @@ interface GameContextType {
   streak:    number;
   lastPlayed: string;
   loading:   boolean; // true while we fetch from Supabase — screens can wait on this
-  addCoins:  (amount: number) => void;
-  addGems:   (amount: number) => void;
+  addCoins:  (amount: number) => number; // returns the change actually applied (0 if already at 0)
+  addGems:   (amount: number) => number;
   spendCoins:(amount: number) => boolean; // false if not enough coins
   spendGems: (amount: number) => boolean;
   updateStreak: () => void;
@@ -56,9 +56,13 @@ export function GameProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading]     = useState(true);
   // Which kid is playing. Read from localStorage (set by the profile picker).
   const [profileId, setProfileId] = useState<string | null>(null);
-  // Latest state for spend checks, so two quick taps can't both pass on stale coins.
+  // The true current totals, updated synchronously on every change. All actions
+  // read from here so quick taps or back-to-back rewards never use stale numbers.
   const stateRef = useRef<GameState>(DEFAULT_STATE);
-  useEffect(() => { stateRef.current = gameState; }, [gameState]);
+  const apply = (next: GameState) => {
+    saveToSupabase(next);
+    setGameState(next);
+  };
 
   // ── LOAD THE ACTIVE PROFILE'S PROGRESS FROM SUPABASE ──
   // Runs once on startup. Reads which kid is active, then pulls their row.
@@ -84,12 +88,14 @@ export function GameProvider({ children }: { children: ReactNode }) {
       if (data && !error) {
         // Row exists — load it into state.
         // clamp also repairs any negative totals saved by older versions
-        setGameState({
+        const loaded = {
           coins:      clamp(data.coins),
           gems:       clamp(data.gems),
           streak:     data.streak ?? 0,
           lastPlayed: data.last_played ?? "",
-        });
+        };
+        stateRef.current = loaded;
+        setGameState(loaded);
       } else {
         // No row yet — create one with defaults so this kid is set up.
         await supabase.from("progress").insert({
@@ -132,74 +138,55 @@ export function GameProvider({ children }: { children: ReactNode }) {
   };
 
   // ── ADD COINS / GEMS ── (negative amounts are penalties, floored at 0)
-  const addCoins = (amount: number) => {
-    setGameState((prev) => {
-      const next = clean({ ...prev, coins: prev.coins + amount });
-      saveToSupabase(next);
-      return next;
-    });
+  const addCoins = (amount: number): number => {
+    const before = stateRef.current.coins;
+    apply(clean({ ...stateRef.current, coins: before + amount }));
+    return stateRef.current.coins - before;
   };
 
-  const addGems = (amount: number) => {
-    setGameState((prev) => {
-      const next = clean({ ...prev, gems: prev.gems + amount });
-      saveToSupabase(next);
-      return next;
-    });
+  const addGems = (amount: number): number => {
+    const before = stateRef.current.gems;
+    apply(clean({ ...stateRef.current, gems: before + amount }));
+    return stateRef.current.gems - before;
   };
 
-  // ── SPEND COINS / GEMS ──
-  // Returns false if there isn't enough. Checks stateRef (updated synchronously
-  // on every change) rather than render state, so a double tap can't overspend.
+  // ── SPEND COINS / GEMS ── returns false if there isn't enough
   const spendCoins = (amount: number): boolean => {
     if (stateRef.current.coins < amount) return false;
-    const next = clean({ ...stateRef.current, coins: stateRef.current.coins - amount });
-    saveToSupabase(next);
-    setGameState(next);
+    apply(clean({ ...stateRef.current, coins: stateRef.current.coins - amount }));
     return true;
   };
 
   const spendGems = (amount: number): boolean => {
     if (stateRef.current.gems < amount) return false;
-    const next = clean({ ...stateRef.current, gems: stateRef.current.gems - amount });
-    saveToSupabase(next);
-    setGameState(next);
+    apply(clean({ ...stateRef.current, gems: stateRef.current.gems - amount }));
     return true;
   };
 
   // ── UPDATE STREAK ──
-  // Called when a kid finishes a session.
+  // Called when a kid starts a game.
   // Same day = no change. Yesterday = streak +1. Otherwise = reset to 1.
   const updateStreak = () => {
     const today     = new Date().toDateString();
     const yesterday = new Date(Date.now() - 86400000).toDateString();
+    const prev      = stateRef.current;
 
-    setGameState((prev) => {
-      let next: GameState;
-
-      if (prev.lastPlayed === today) {
-        // Already played today — no change, no save needed.
-        return prev;
-      } else if (prev.lastPlayed === yesterday) {
-        // Played yesterday — streak continues.
-        const newStreak = prev.streak + 1;
-        const milestone = STREAK_MILESTONES[newStreak];
-        const bonusCoins = milestone ? milestone.coins : newStreak % 10 === 0 ? STREAK_BONUS_COINS : 0;
-        next = clean({
-          ...prev,
-          streak:     newStreak,
-          coins:      prev.coins + bonusCoins,
-          gems:       prev.gems + (milestone?.gems ?? 0),
-          lastPlayed: today,
-        });
-      } else {
-        // Missed a day or first time — reset streak to 1.
-        next = { ...prev, streak: 1, lastPlayed: today };
-      }
-
-      saveToSupabase(next);
-      return next;
-    });
+    if (prev.lastPlayed === today) return;
+    if (prev.lastPlayed === yesterday) {
+      const newStreak  = prev.streak + 1;
+      const milestone  = STREAK_MILESTONES[newStreak];
+      const bonusCoins = milestone ? milestone.coins : newStreak % 10 === 0 ? STREAK_BONUS_COINS : 0;
+      apply(clean({
+        ...prev,
+        streak:     newStreak,
+        coins:      prev.coins + bonusCoins,
+        gems:       prev.gems + (milestone?.gems ?? 0),
+        lastPlayed: today,
+      }));
+    } else {
+      // Missed a day or first time — reset streak to 1.
+      apply({ ...prev, streak: 1, lastPlayed: today });
+    }
   };
 
   return (

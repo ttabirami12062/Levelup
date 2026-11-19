@@ -132,7 +132,7 @@ function ShopContent() {
       >
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <button
-            onClick={() => router.push(`/room?id=${roomId}`)}
+            onClick={() => router.push(searchParams.get("from") === "home" ? "/home" : `/room?id=${roomId}`)}
             style={{
               background: "rgba(255,255,255,0.3)",
               border: "none",

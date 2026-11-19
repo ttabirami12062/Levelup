@@ -113,7 +113,7 @@ export default function Home() {
             </div>
           </div>
 
-          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+          <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", justifyContent: "flex-end" }}>
             <div style={{ background: "rgba(255,255,255,0.92)", borderRadius: 999, padding: "6px 12px", display: "flex", alignItems: "center", gap: 6, boxShadow: "0 2px 8px rgba(0,0,0,0.1)" }}>
               <CoinIcon size={18} />
               <span style={{ fontSize: 14, color: "#C47A10", fontFamily: "var(--font-game)" }}>{coins}</span>
@@ -122,6 +122,19 @@ export default function Home() {
               <GemIcon size={16} />
               <span style={{ fontSize: 14, color: "#6A4FC4", fontFamily: "var(--font-game)" }}>{gems}</span>
             </div>
+            <button
+              onClick={() => router.push("/room/shop?from=home")}
+              aria-label="Shop"
+              style={{
+                height: 34, borderRadius: 999, border: "2px solid white", cursor: "pointer",
+                background: "linear-gradient(135deg, #FF8FAB, #FF6B9D)", boxShadow: "0 3px 0 #CC4477",
+                display: "flex", alignItems: "center", gap: 5, padding: "0 12px 0 9px",
+                fontFamily: "var(--font-game)", fontSize: 14, color: "white",
+              }}
+            >
+              <ShopBagIcon />
+              shop
+            </button>
             <button
               onClick={() => setShowHelp(true)}
               aria-label="How to play"
@@ -551,6 +564,16 @@ function RoomIcon({ id, unlocked }: { id: number; unlocked: boolean }) {
       <path d="M11 14 L11 10 C11 6 21 6 21 10 L21 14" fill="none" stroke="rgba(255,255,255,0.6)" strokeWidth="2.5" strokeLinecap="round"/>
       <ellipse cx="16" cy="21" rx="2.5" ry="2.5" fill="rgba(255,255,255,0.6)"/>
       <rect x="15" y="21" width="2" height="4" rx="1" fill="rgba(255,255,255,0.6)"/>
+    </svg>
+  );
+}
+
+function ShopBagIcon() {
+  return (
+    <svg width="16" height="17" viewBox="0 0 16 17">
+      <path d="M5 6 V4.5 a3 3 0 0 1 6 0 V6" fill="none" stroke="white" strokeWidth="1.8" strokeLinecap="round"/>
+      <rect x="2" y="5.5" width="12" height="10" rx="2.5" fill="#FFE066" stroke="#C49A1A" strokeWidth="1.2"/>
+      <circle cx="8" cy="10.5" r="1.6" fill="#F5A623"/>
     </svg>
   );
 }

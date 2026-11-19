@@ -57,6 +57,7 @@ export default function HowToPlay({ open, onClose }: { open: boolean; onClose: (
             <P>Your prize is usually 1 coin. Sometimes it&apos;s 2 coins. And if you&apos;re really lucky, a shiny gem!</P>
             <Row label="2 wrong answers" value="lose 1 coin" />
             <P>Don&apos;t worry, your coins can never go below zero.</P>
+            <Tip>At the top you&apos;ll see your coins, a green number for coins you earn and a red number for coins you lose. Tap end game to watch them add up!</Tip>
           </Section>
 
           <Section icon={<StairsIcon />} color="#5DBE4A" title="Levels">
@@ -93,7 +94,7 @@ export default function HowToPlay({ open, onClose }: { open: boolean; onClose: (
 
           <Section icon={<ShopIcon />} color="#F5A623" title="Shop">
             <P>Spend your coins and gems on fun things for your rooms, like sofas, fountains, a fish bowl and even a gaming console.</P>
-            <P>Everyone starts with a little plant. Everything else you earn by playing, so keep collecting!</P>
+            <P>Everyone starts with a little plant, and every room has a window. Everything else you earn by playing, so keep collecting!</P>
             <P>Things you buy go to Your Items, and you can use them in any of your rooms. You keep them forever!</P>
           </Section>
 

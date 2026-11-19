@@ -49,7 +49,7 @@ export const ALL_ITEMS: ShopItem[] = [
   { id: "nightstand", name: "Nightstand",   category: "furniture", price: 65,  currency: "coins", footprint: { w: 1, d: 1 } },
   { id: "floorlamp",  name: "Floor Lamp",   category: "furniture", price: 70,  currency: "coins", footprint: { w: 1, d: 1 } },
   { id: "fireplace",  name: "Fireplace",    category: "furniture", price: 200, currency: "coins", footprint: { w: 1, d: 1 } },
-  { id: "door",       name: "Door",         category: "walls",     price: 0,   currency: "coins", footprint: { w: 1, d: 2 } },
+  { id: "door",       name: "Door",         category: "walls",     price: 60,  currency: "coins", footprint: { w: 1, d: 2 } },
   { id: "window",     name: "Window",       category: "walls",     price: 0,   currency: "coins", footprint: { w: 2, d: 1 } },
   { id: "poster",     name: "Star Poster",  category: "walls",     price: 50,  currency: "coins", footprint: { w: 1, d: 1 } },
   { id: "clock",      name: "Magic Clock",  category: "walls",     price: 180, currency: "coins", footprint: { w: 1, d: 1 } },
@@ -79,31 +79,27 @@ export const ALL_ITEMS: ShopItem[] = [
 ];
 
 // Every kid starts with one plant; everything else is bought in the shop.
-// The door and window are part of each room's walls, so they aren't sold.
+// The window is part of each room's walls, so it isn't sold.
 export const STARTER_ITEMS = ["plant"];
-export const ROOM_FIXTURES = ["door", "window"];
+export const ROOM_FIXTURES = ["window"];
 const FREE_ITEMS = [...STARTER_ITEMS, ...ROOM_FIXTURES];
 
 // Default layouts per room, used when a kid has no saved data yet.
 const DEFAULT_ROOM_ITEMS: Record<number, PlacedItem[]> = {
   1: [
     { itemId: "window", x: 0.72, y: 0.30 },
-    { itemId: "door",   x: 0.92, y: 0.55 },
     { itemId: "plant",  x: 0.10, y: 0.86 },
   ],
   2: [
     { itemId: "window", x: 0.30, y: 0.30 },
-    { itemId: "door",   x: 0.90, y: 0.55 },
     { itemId: "plant",  x: 0.12, y: 0.86 },
   ],
   3: [
     { itemId: "window", x: 0.30, y: 0.30 },
-    { itemId: "door",   x: 0.90, y: 0.55 },
     { itemId: "plant",  x: 0.12, y: 0.86 },
   ],
   4: [
     { itemId: "window", x: 0.30, y: 0.30 },
-    { itemId: "door",   x: 0.90, y: 0.55 },
     { itemId: "plant",  x: 0.12, y: 0.86 },
   ],
 };

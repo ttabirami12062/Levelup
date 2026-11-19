@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useSyncExternalStore } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useGame } from "@/lib/gameContext";
 import { Suspense } from "react";
@@ -832,7 +832,12 @@ function Bush() {
   );
 }
 
+const noopSubscribe = () => () => {};
+
+// The battle measures the window to place lanes, so it only renders in the browser.
 export default function VsAiBattle() {
+  const mounted = useSyncExternalStore(noopSubscribe, () => true, () => false);
+  if (!mounted) return <div style={{ width: "100%", height: "100vh", background: "#1A1A2E" }} />;
   return (
     <Suspense fallback={
       <div style={{ width: "100%", height: "100vh", background: "#1A1A2E", display: "flex", alignItems: "center", justifyContent: "center" }}>
